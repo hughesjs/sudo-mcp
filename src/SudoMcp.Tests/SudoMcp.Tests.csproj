@@ -24,10 +24,4 @@
     <ProjectReference Include="..\SudoMcp\SudoMcp.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\SudoMcp\Configuration\BlockedCommands.json" Link="Configuration\BlockedCommands.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>

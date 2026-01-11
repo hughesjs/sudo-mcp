@@ -66,7 +66,7 @@ All configurations support these command-line options:
 
 | Option | Alias | Description | Default |
 |--------|-------|-------------|---------|
-| `--blocklist-file <path>` | `-b` | Path to blocklist JSON file | `Configuration/BlockedCommands.json` |
+| `--blocklist-file <path>` | `-b` | Path to custom blocklist JSON file | Embedded default |
 | `--no-blocklist` | | **DANGEROUS**: Disable all validation | `false` |
 | `--audit-log <path>` | `-a` | Path to audit log file | `/var/log/sudo-mcp/audit.log` |
 | `--timeout <seconds>` | `-t` | Default command timeout | `15` |
@@ -139,8 +139,8 @@ Use `sudo-mcp-no-blocklist` **ONLY** in isolated test environments:
 ### Commands Being Blocked
 
 1. Check the audit log for denial reasons: `/var/log/sudo-mcp/audit.log`
-2. Review the blocklist configuration: `Configuration/BlockedCommands.json`
-3. Create a custom blocklist with more permissive patterns
+2. The default blocklist is embedded in the binary
+3. Create a custom blocklist JSON file with more permissive patterns and use `--blocklist-file`
 4. **Last resort**: Use `--no-blocklist` in an isolated environment
 
 ### Timeout Issues

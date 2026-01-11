@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
+using SudoMcp.Configuration;
 using SudoMcp.Services;
 using Xunit;
 
@@ -14,12 +14,8 @@ public sealed class CommandValidatorTests
 
     public CommandValidatorTests()
     {
-        // Load real blocklist configuration from JSON file
-        IConfigurationRoot configuration = new ConfigurationBuilder()
-            .AddJsonFile("Configuration/BlockedCommands.json", optional: false)
-            .Build();
-
-        _validator = new CommandValidator(configuration, enabled: true);
+        // Use the embedded default blocklist
+        _validator = new CommandValidator(DefaultBlocklist.Configuration);
     }
 
     [Fact]
@@ -67,6 +63,16 @@ public sealed class CommandValidatorTests
     public void Validator_SafeCommand_IsAllowed()
     {
         ValidationResult result = _validator.ValidateCommand("systemctl restart nginx");
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_Disabled_AllowsEverything()
+    {
+        CommandValidator disabledValidator = new();
+
+        ValidationResult result = disabledValidator.ValidateCommand("rm -rf /");
 
         result.IsValid.Should().BeTrue();
     }

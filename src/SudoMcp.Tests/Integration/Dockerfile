@@ -38,10 +38,6 @@ RUN mkdir -p /etc/polkit-1/rules.d && \
 COPY --from=build /app/publish/SudoMcp /usr/local/bin/sudo-mcp
 RUN chmod +x /usr/local/bin/sudo-mcp
 
-# Install blocklist configuration
-RUN mkdir -p /etc/sudo-mcp
-COPY src/SudoMcp/Configuration/BlockedCommands.json /etc/sudo-mcp/
-
 # Create audit log directory
 RUN mkdir -p /var/log/sudo-mcp && \
     chown testuser:testuser /var/log/sudo-mcp

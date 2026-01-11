@@ -7,7 +7,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="/etc/sudo-mcp"
 LOG_DIR="/var/log/sudo-mcp"
 
 echo "=== sudo-mcp Installation Script ==="
@@ -61,22 +60,6 @@ sudo chmod +x "$INSTALL_DIR/sudo-mcp"
 
 echo "Binary installed to $INSTALL_DIR/sudo-mcp"
 
-# Install default configuration
-if [ ! -d "$CONFIG_DIR" ]; then
-    echo "Creating configuration directory: $CONFIG_DIR"
-    sudo mkdir -p "$CONFIG_DIR"
-    sudo cp "$PROJECT_ROOT/src/SudoMcp/Configuration/BlockedCommands.json" "$CONFIG_DIR/"
-    echo "Default blocklist installed to $CONFIG_DIR/BlockedCommands.json"
-else
-    echo "Configuration directory already exists: $CONFIG_DIR"
-    if [ ! -f "$CONFIG_DIR/BlockedCommands.json" ]; then
-        sudo cp "$PROJECT_ROOT/src/SudoMcp/Configuration/BlockedCommands.json" "$CONFIG_DIR/"
-        echo "Default blocklist installed to $CONFIG_DIR/BlockedCommands.json"
-    else
-        echo "Blocklist already exists (not overwriting): $CONFIG_DIR/BlockedCommands.json"
-    fi
-fi
-
 # Create log directory
 if [ ! -d "$LOG_DIR" ]; then
     echo "Creating log directory: $LOG_DIR"
@@ -91,8 +74,8 @@ echo ""
 echo "=== Installation Complete ==="
 echo ""
 echo "Binary location: $INSTALL_DIR/sudo-mcp"
-echo "Config location: $CONFIG_DIR/BlockedCommands.json"
-echo "Log location: $LOG_DIR/audit.log"
+echo "Log location:    $LOG_DIR/audit.log"
+echo "Blocklist:       embedded default (use --blocklist-file for custom)"
 echo ""
 echo "Test the installation:"
 echo "  $INSTALL_DIR/sudo-mcp --help"

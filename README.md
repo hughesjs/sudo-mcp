@@ -100,9 +100,7 @@ dotnet publish src/SudoMcp/SudoMcp.csproj \
 sudo cp publish/SudoMcp /usr/local/bin/sudo-mcp
 sudo chmod +x /usr/local/bin/sudo-mcp
 
-# Set up configuration and logging
-sudo mkdir -p /etc/sudo-mcp
-sudo cp src/SudoMcp/Configuration/BlockedCommands.json /etc/sudo-mcp/
+# Set up log directory
 sudo mkdir -p /var/log/sudo-mcp
 sudo chown $USER:$USER /var/log/sudo-mcp
 ```
@@ -126,7 +124,7 @@ sudo-mcp supports the following command-line arguments for runtime configuration
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--blocklist-file <path>` | `-b` | Path to custom blocklist JSON file | `Configuration/BlockedCommands.json` |
+| `--blocklist-file <path>` | `-b` | Path to custom blocklist JSON file | Embedded default |
 | `--no-blocklist` | - | **DANGEROUS**: Disable all command validation | `false` |
 | `--audit-log <path>` | `-a` | Path to audit log file | `/var/log/sudo-mcp/audit.log` |
 | `--timeout <seconds>` | `-t` | Command execution timeout in seconds | `15` |
@@ -162,7 +160,7 @@ sudo-mcp --help
 
 ### Blocklist Configuration
 
-The default blocklist (`src/SudoMcp/Configuration/BlockedCommands.json`) prevents execution of dangerous commands using three strategies:
+sudo-mcp includes an embedded default blocklist that prevents execution of dangerous commands using three strategies:
 
 1. **Exact Matches** - Specific dangerous commands (e.g., `rm -rf /`)
 2. **Regex Patterns** - Pattern-based blocking for classes of operations

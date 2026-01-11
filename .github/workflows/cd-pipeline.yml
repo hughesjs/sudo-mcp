@@ -104,9 +104,6 @@ jobs:
           cp ./artifacts/x64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
           chmod +x "${TARBALL_DIR}/sudo-mcp"
 
-          # Copy configuration
-          cp src/SudoMcp/Configuration/BlockedCommands.json "${TARBALL_DIR}/"
-
           # Copy scripts and make executable
           cp scripts/install.sh "${TARBALL_DIR}/"
           cp scripts/uninstall.sh "${TARBALL_DIR}/"
@@ -130,9 +127,6 @@ jobs:
           # Copy binary and make executable
           cp ./artifacts/arm64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
           chmod +x "${TARBALL_DIR}/sudo-mcp"
-
-          # Copy configuration
-          cp src/SudoMcp/Configuration/BlockedCommands.json "${TARBALL_DIR}/"
 
           # Copy scripts and make executable
           cp scripts/install.sh "${TARBALL_DIR}/"
@@ -218,10 +212,6 @@ jobs:
 
             # Install binary
             install -Dm755 publish/SudoMcp "$pkgdir/usr/local/bin/sudo-mcp"
-
-            # Install default configuration
-            install -Dm644 src/SudoMcp/Configuration/BlockedCommands.json \
-              "$pkgdir/etc/sudo-mcp/BlockedCommands.json"
 
             # Install documentation
             install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"

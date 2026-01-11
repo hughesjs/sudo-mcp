@@ -9,7 +9,6 @@ namespace SudoMcp.Tests.Integration;
 public sealed class McpTestClient : IAsyncDisposable
 {
     private const string BinaryPath = "/usr/local/bin/sudo-mcp";
-    private const string BlocklistPath = "/etc/sudo-mcp/BlockedCommands.json";
     private const string AuditLogPath = "/var/log/sudo-mcp/audit.log";
 
     private readonly IContainer _container;
@@ -97,7 +96,7 @@ public sealed class McpTestClient : IAsyncDisposable
             // Write a script to avoid quoting issues with nested shells
             string scriptFile = $"{_workDir}/run-{_requestId}.sh";
             string scriptContent = $@"#!/bin/bash
-(cat {requestFile}; sleep 2) | {BinaryPath} --blocklist-file {BlocklistPath} --audit-log {AuditLogPath} > {responseFile} 2> {stderrFile}
+(cat {requestFile}; sleep 2) | {BinaryPath} --audit-log {AuditLogPath} > {responseFile} 2> {stderrFile}
 ";
             await _container.ExecAsync(new[]
             {

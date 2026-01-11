@@ -1,15 +1,15 @@
 using System.CommandLine;
-using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SudoMcp.Configuration;
 using SudoMcp.Models;
 using SudoMcp.Services;
 
 Option<string?> blocklistFileOption = new(
     aliases: ["--blocklist-file", "-b"],
-    description: "Path to blocklist JSON file",
-    getDefaultValue: () => "Configuration/BlockedCommands.json");
+    description: "Path to custom blocklist JSON file (uses embedded default if not specified)");
 
 Option<bool> noBlocklistOption = new(
     aliases: ["--no-blocklist"],
@@ -43,8 +43,6 @@ rootCommand.SetHandler(async (blocklistFile, noBlocklist, auditLog, timeout) =>
         options.LogToStandardErrorThreshold = LogLevel.Trace;
     });
 
-    builder.Configuration.AddJsonFile("Configuration/appsettings.json", optional: true, reloadOnChange: false);
-
     builder.Services
         .AddMcpServer()
         .WithStdioServerTransport()
@@ -58,25 +56,47 @@ rootCommand.SetHandler(async (blocklistFile, noBlocklist, auditLog, timeout) =>
 
     builder.Services.AddSingleton<CommandValidator>(sp =>
     {
+        ILogger<CommandValidator> logger = sp.GetRequiredService<ILogger<CommandValidator>>();
+
         if (noBlocklist)
         {
-            ILogger<CommandValidator> logger = sp.GetRequiredService<ILogger<CommandValidator>>();
             logger.LogWarning("⚠️ BLOCKLIST DISABLED - All commands will be allowed!");
-            return new(enabled: false);
+            return new CommandValidator();
         }
 
-        if (string.IsNullOrWhiteSpace(blocklistFile) || !File.Exists(blocklistFile))
+        BlocklistConfiguration blocklist;
+
+        if (!string.IsNullOrWhiteSpace(blocklistFile))
         {
-            throw new FileNotFoundException(
-                $"Blocklist file not found: {blocklistFile}. " +
-                "Use --no-blocklist to explicitly disable validation, or provide a valid blocklist file.");
+            // Custom blocklist file specified
+            if (!File.Exists(blocklistFile))
+            {
+                throw new FileNotFoundException(
+                    $"Blocklist file not found: {blocklistFile}");
+            }
+
+            logger.LogInformation("Loading custom blocklist from: {BlocklistFile}", blocklistFile);
+            string json = File.ReadAllText(blocklistFile);
+
+            JsonSerializerOptions jsonOptions = new() { PropertyNameCaseInsensitive = true };
+            BlocklistFileRoot? root = JsonSerializer.Deserialize<BlocklistFileRoot>(json, jsonOptions);
+
+            if (root?.BlockedCommands is null)
+            {
+                throw new InvalidOperationException(
+                    $"Invalid blocklist file format: {blocklistFile}. Expected 'BlockedCommands' root element.");
+            }
+
+            blocklist = root.BlockedCommands.ToConfiguration();
+        }
+        else
+        {
+            // Use embedded default
+            logger.LogInformation("Using embedded default blocklist");
+            blocklist = DefaultBlocklist.Configuration;
         }
 
-        IConfigurationRoot config = new ConfigurationBuilder()
-            .AddJsonFile(blocklistFile, optional: false, reloadOnChange: false)
-            .Build();
-
-        return new(config, enabled: true);
+        return new CommandValidator(blocklist);
     });
 
     builder.Services.AddScoped<PkexecExecutor>();
@@ -86,7 +106,20 @@ rootCommand.SetHandler(async (blocklistFile, noBlocklist, auditLog, timeout) =>
 
     ILogger<Program> logger = host.Services.GetRequiredService<ILogger<Program>>();
     logger.LogInformation("sudo-mcp starting...");
-    logger.LogInformation("Blocklist: {Blocklist}", noBlocklist ? "DISABLED" : blocklistFile);
+
+    if (noBlocklist)
+    {
+        logger.LogInformation("Blocklist: DISABLED");
+    }
+    else if (!string.IsNullOrWhiteSpace(blocklistFile))
+    {
+        logger.LogInformation("Blocklist: {Blocklist}", blocklistFile);
+    }
+    else
+    {
+        logger.LogInformation("Blocklist: embedded default");
+    }
+
     logger.LogInformation("Audit log: {AuditLog}", auditLog);
     logger.LogInformation("Timeout: {Timeout} seconds", timeout);
 
@@ -95,3 +128,11 @@ rootCommand.SetHandler(async (blocklistFile, noBlocklist, auditLog, timeout) =>
 }, blocklistFileOption, noBlocklistOption, auditLogOption, timeoutOption);
 
 return await rootCommand.InvokeAsync(args);
+
+/// <summary>
+/// Root element for blocklist JSON files (wraps BlockedCommands).
+/// </summary>
+file class BlocklistFileRoot
+{
+    public BlocklistDto? BlockedCommands { get; init; }
+}
