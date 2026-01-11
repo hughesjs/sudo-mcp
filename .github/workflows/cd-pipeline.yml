@@ -1,0 +1,353 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "!**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Calculate Semantic Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate semantic version
+        id: semver
+        uses: ietf-tools/semver-action@v1.11.0
+        with:
+          token: ${{ github.token }}
+          branch: master
+          majorList: major, breaking
+          minorList: minor, feat, feature
+          patchList: fix, bugfix, perf, refactor, test, tests, chore, patch
+          patchAll: true
+
+  build-binaries:
+    name: Build ${{ matrix.arch.name }} Binary
+    runs-on: ubuntu-latest
+    needs: version
+    strategy:
+      matrix:
+        arch:
+          - rid: linux-x64
+            name: x64
+          - rid: linux-arm64
+            name: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Build ${{ matrix.arch.name }} binary
+        run: |
+          dotnet publish src/SudoMcp/SudoMcp.csproj \
+            -c Release \
+            -r ${{ matrix.arch.rid }} \
+            --self-contained \
+            -o ./publish/${{ matrix.arch.name }} \
+            /p:PublishSingleFile=true \
+            /p:Version=${{ needs.version.outputs.version }}
+
+      - name: Upload ${{ matrix.arch.name }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudo-mcp-${{ matrix.arch.name }}
+          path: ./publish/${{ matrix.arch.name }}/SudoMcp
+          if-no-files-found: error
+
+  create-tarballs:
+    name: Create Release Tarballs
+    runs-on: ubuntu-latest
+    needs: [version, build-binaries]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download x64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-x64
+          path: ./artifacts/x64
+
+      - name: Download ARM64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-arm64
+          path: ./artifacts/arm64
+
+      - name: Create x64 tarball
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          TARBALL_DIR="sudo-mcp-x64-v${VERSION}"
+          mkdir -p "${TARBALL_DIR}"
+
+          # Copy binary and make executable
+          cp ./artifacts/x64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
+          chmod +x "${TARBALL_DIR}/sudo-mcp"
+
+          # Copy configuration
+          cp src/SudoMcp/Configuration/BlockedCommands.json "${TARBALL_DIR}/"
+
+          # Copy scripts and make executable
+          cp scripts/install.sh "${TARBALL_DIR}/"
+          cp scripts/uninstall.sh "${TARBALL_DIR}/"
+          chmod +x "${TARBALL_DIR}/install.sh"
+          chmod +x "${TARBALL_DIR}/uninstall.sh"
+
+          # Copy documentation
+          cp README.md "${TARBALL_DIR}/"
+          cp SECURITY.md "${TARBALL_DIR}/"
+          cp LICENSE "${TARBALL_DIR}/"
+
+          # Create tarball
+          tar -czf "sudo-mcp-x64-v${VERSION}.tar.gz" "${TARBALL_DIR}"
+
+      - name: Create ARM64 tarball
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          TARBALL_DIR="sudo-mcp-arm64-v${VERSION}"
+          mkdir -p "${TARBALL_DIR}"
+
+          # Copy binary and make executable
+          cp ./artifacts/arm64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
+          chmod +x "${TARBALL_DIR}/sudo-mcp"
+
+          # Copy configuration
+          cp src/SudoMcp/Configuration/BlockedCommands.json "${TARBALL_DIR}/"
+
+          # Copy scripts and make executable
+          cp scripts/install.sh "${TARBALL_DIR}/"
+          cp scripts/uninstall.sh "${TARBALL_DIR}/"
+          chmod +x "${TARBALL_DIR}/install.sh"
+          chmod +x "${TARBALL_DIR}/uninstall.sh"
+
+          # Copy documentation
+          cp README.md "${TARBALL_DIR}/"
+          cp SECURITY.md "${TARBALL_DIR}/"
+          cp LICENSE "${TARBALL_DIR}/"
+
+          # Create tarball
+          tar -czf "sudo-mcp-arm64-v${VERSION}.tar.gz" "${TARBALL_DIR}"
+
+      - name: Upload x64 tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudo-mcp-x64-tarball
+          path: sudo-mcp-x64-v${{ needs.version.outputs.version }}.tar.gz
+          if-no-files-found: error
+
+      - name: Upload ARM64 tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudo-mcp-arm64-tarball
+          path: sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
+          if-no-files-found: error
+
+  generate-pkgbuild:
+    name: Generate Arch Linux PKGBUILD
+    runs-on: ubuntu-latest
+    needs: version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate PKGBUILD
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          cat > PKGBUILD << 'PKGBUILD_END'
+          # Maintainer: James Hughes <james@jjhughes.co.uk>
+          pkgname=sudo-mcp
+          pkgver=${{ needs.version.outputs.version }}
+          pkgrel=1
+          pkgdesc="MCP server for privileged command execution via sudo/pkexec"
+          arch=('x86_64' 'aarch64')
+          url="https://github.com/hughesjs/sudo-mcp"
+          license=('MIT')
+          depends=('polkit')
+          makedepends=('dotnet-sdk>=10.0')
+          source=("$pkgname-$pkgver.tar.gz::https://github.com/hughesjs/sudo-mcp/archive/v$pkgver.tar.gz")
+          sha256sums=('SKIP')
+
+          build() {
+            cd "$pkgname-$pkgver"
+
+            # Detect architecture
+            case "$CARCH" in
+              x86_64)
+                _rid=linux-x64
+                ;;
+              aarch64)
+                _rid=linux-arm64
+                ;;
+              *)
+                error "Unsupported architecture: $CARCH"
+                return 1
+                ;;
+            esac
+
+            dotnet publish src/SudoMcp/SudoMcp.csproj \
+              -c Release \
+              -r $_rid \
+              --self-contained \
+              -o ./publish \
+              /p:PublishSingleFile=true \
+              /p:Version=$pkgver
+          }
+
+          package() {
+            cd "$pkgname-$pkgver"
+
+            # Install binary
+            install -Dm755 publish/SudoMcp "$pkgdir/usr/local/bin/sudo-mcp"
+
+            # Install default configuration
+            install -Dm644 src/SudoMcp/Configuration/BlockedCommands.json \
+              "$pkgdir/etc/sudo-mcp/BlockedCommands.json"
+
+            # Install documentation
+            install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+            install -Dm644 SECURITY.md "$pkgdir/usr/share/doc/$pkgname/SECURITY.md"
+            install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+            # Install scripts (as examples)
+            install -Dm755 scripts/install.sh "$pkgdir/usr/share/doc/$pkgname/install.sh"
+            install -Dm755 scripts/uninstall.sh "$pkgdir/usr/share/doc/$pkgname/uninstall.sh"
+
+            # Create log directory
+            install -dm755 "$pkgdir/var/log/sudo-mcp"
+          }
+          PKGBUILD_END
+
+      - name: Upload PKGBUILD
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkgbuild
+          path: PKGBUILD
+          if-no-files-found: error
+
+  create-tag:
+    name: Create Git Tag
+    runs-on: ubuntu-latest
+    needs: [version, build-binaries, create-tarballs, generate-pkgbuild]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and push tag
+        run: |
+          VERSION="v${{ needs.version.outputs.version }}"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "${VERSION}"
+          git push origin "${VERSION}"
+
+  generate-changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-latest
+    needs: [version, create-tag]
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        uses: requarks/changelog-action@v1
+        with:
+          token: ${{ github.token }}
+          tag: v${{ needs.version.outputs.version }}
+          writeToFile: false
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [version, create-tag, generate-changelog, create-tarballs, generate-pkgbuild]
+    steps:
+      - name: Download x64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-x64-tarball
+
+      - name: Download ARM64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-arm64-tarball
+
+      - name: Download PKGBUILD
+        uses: actions/download-artifact@v4
+        with:
+          name: pkgbuild
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          name: sudo-mcp v${{ needs.version.outputs.version }}
+          tag: v${{ needs.version.outputs.version }}
+          body: |
+            # sudo-mcp v${{ needs.version.outputs.version }}
+
+            ⚠️ **Security Warning**: This tool allows AI models to execute privileged commands. Use at your own risk.
+
+            ## Installation
+
+            ### Binary Release (Recommended)
+
+            **x86_64 (Intel/AMD)**:
+            ```bash
+            curl -LO https://github.com/hughesjs/sudo-mcp/releases/download/v${{ needs.version.outputs.version }}/sudo-mcp-x64-v${{ needs.version.outputs.version }}.tar.gz
+            tar -xzf sudo-mcp-x64-v${{ needs.version.outputs.version }}.tar.gz
+            cd sudo-mcp-x64-v${{ needs.version.outputs.version }}
+            chmod +x install.sh
+            ./install.sh
+            ```
+
+            **ARM64 (aarch64)**:
+            ```bash
+            curl -LO https://github.com/hughesjs/sudo-mcp/releases/download/v${{ needs.version.outputs.version }}/sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
+            tar -xzf sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
+            cd sudo-mcp-arm64-v${{ needs.version.outputs.version }}
+            chmod +x install.sh
+            ./install.sh
+            ```
+
+            ### Arch Linux
+
+            ```bash
+            curl -LO https://github.com/hughesjs/sudo-mcp/releases/download/v${{ needs.version.outputs.version }}/PKGBUILD
+            makepkg -si
+            ```
+
+            ## Changelog
+
+            ${{ needs.generate-changelog.outputs.changelog }}
+          artifacts: |
+            sudo-mcp-x64-v${{ needs.version.outputs.version }}.tar.gz
+            sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
+            PKGBUILD
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}

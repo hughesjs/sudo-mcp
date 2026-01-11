@@ -201,6 +201,103 @@ For development testing with `dotnet run`:
 7. Test uninstall script: `./scripts/uninstall.sh`
 8. Update version numbers if applicable
 
+## CD/CI Pipeline
+
+### Automated Releases
+
+The project uses GitHub Actions for automated releases on every push to `master`:
+
+**Workflow**: `.github/workflows/cd-pipeline.yml`
+
+**Trigger Conditions**:
+- Push to `master` branch
+- Changes to `src/**` or `scripts/**`
+- Manual workflow dispatch
+
+**Release Process**:
+1. **Semantic Versioning**: Version calculated from commit messages
+   - `feat:`, `feature:`, `minor:` → minor version bump
+   - `fix:`, `bugfix:`, `patch:`, `chore:` → patch version bump
+   - `major:`, `breaking:` → major version bump
+2. **Multi-Architecture Build**: Parallel builds for x64 and ARM64
+3. **Tarball Creation**: Complete packages with binaries, config, scripts, docs
+4. **PKGBUILD Generation**: Arch Linux package build file
+5. **Git Tag**: Version tag created (e.g., `v0.1.0`)
+6. **GitHub Release**: Automatic release with changelog and artifacts
+
+**Release Artifacts**:
+- `sudo-mcp-x64-v{version}.tar.gz` - x86_64 complete package
+- `sudo-mcp-arm64-v{version}.tar.gz` - ARM64 complete package
+- `PKGBUILD` - Arch Linux package file
+
+### Commit Message Guidelines
+
+For proper semantic versioning, use these commit message prefixes:
+
+**Minor version bump** (0.x.0):
+```
+feat: add new blocklist pattern for systemd commands
+feature: implement custom timeout per MCP request
+```
+
+**Patch version bump** (0.0.x):
+```
+fix: correct regex pattern for dd command blocking
+bugfix: handle pkexec authentication cancellation properly
+perf: optimize blocklist validation regex compilation
+chore: update .NET dependencies to 10.0.1
+```
+
+**Major version bump** (x.0.0):
+```
+breaking: change default timeout from 300s to 15s
+major: remove support for --no-blocklist flag
+```
+
+### Testing Releases
+
+**Manual workflow trigger**:
+```bash
+# From GitHub UI: Actions → CD Pipeline → Run workflow
+```
+
+**Test installation from release**:
+```bash
+# Download and test x64 tarball
+curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/sudo-mcp-x64-v0.1.0.tar.gz
+tar -tzf sudo-mcp-x64-v0.1.0.tar.gz  # Verify contents
+tar -xzf sudo-mcp-x64-v0.1.0.tar.gz
+cd sudo-mcp-x64-v0.1.0
+./sudo-mcp --help
+./install.sh
+```
+
+**Test PKGBUILD** (on Arch Linux):
+```bash
+curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/PKGBUILD
+makepkg -si
+```
+
+### Versioning Strategy
+
+**Current version**: `0.1.0` (early development, not production-ready)
+
+**Version progression**:
+- `0.x.x` - Pre-1.0 development releases
+- `1.0.0` - First stable production release (when ready)
+- `1.x.x` - Stable releases with backward compatibility
+- `2.0.0+` - Major releases with breaking changes
+
+### CI for Pull Requests
+
+**Not yet implemented** - will be added when tests are written.
+
+Future CI will:
+- Run tests on all PRs
+- Build both architectures to catch compile errors
+- Validate blocklist JSON configuration
+- Check code formatting and linting
+
 ## Resources
 
 - MCP Specification: https://modelcontextprotocol.io/

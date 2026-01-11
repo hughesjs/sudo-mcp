@@ -40,7 +40,37 @@ sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP clie
 
 ## Installation
 
-### Quick Install (Recommended)
+### Binary Release (Recommended)
+
+Download the latest pre-built binary for your architecture:
+
+**x86_64 (Intel/AMD)**:
+```bash
+curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/sudo-mcp-x64-v0.1.0.tar.gz
+tar -xzf sudo-mcp-x64-v0.1.0.tar.gz
+cd sudo-mcp-x64-v0.1.0
+chmod +x install.sh
+./install.sh
+```
+
+**ARM64 (aarch64)**:
+```bash
+curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/sudo-mcp-arm64-v0.1.0.tar.gz
+tar -xzf sudo-mcp-arm64-v0.1.0.tar.gz
+cd sudo-mcp-arm64-v0.1.0
+chmod +x install.sh
+./install.sh
+```
+
+### Arch Linux
+
+Using the provided PKGBUILD:
+```bash
+curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/PKGBUILD
+makepkg -si
+```
+
+### From Source (Development)
 
 ```bash
 git clone https://github.com/hughesjs/sudo-mcp.git
@@ -49,9 +79,9 @@ chmod +x scripts/install.sh
 ./scripts/install.sh
 ```
 
-This installs sudo-mcp to `/usr/local/bin/sudo-mcp` with default configuration.
+This builds from source and installs to `/usr/local/bin/sudo-mcp` with default configuration.
 
-### Manual Installation
+### Manual Build and Installation
 
 ```bash
 # Clone and build
