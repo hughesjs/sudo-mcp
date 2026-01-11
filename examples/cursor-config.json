@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "sudo-mcp": {
+      "command": "/usr/local/bin/sudo-mcp"
+    },
+    "sudo-mcp-project-specific": {
+      "command": "/usr/local/bin/sudo-mcp",
+      "args": [
+        "--blocklist-file",
+        "${workspaceFolder}/.sudo-mcp/blocklist.json",
+        "--audit-log",
+        "${workspaceFolder}/.sudo-mcp/audit.log"
+      ]
+    },
+    "sudo-mcp-no-blocklist": {
+      "command": "/usr/local/bin/sudo-mcp",
+      "args": [
+        "--no-blocklist"
+      ]
+    }
+  }
+}

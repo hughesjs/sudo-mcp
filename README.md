@@ -40,21 +40,54 @@ sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP clie
 
 ## Installation
 
-### From Source
+### Quick Install (Recommended)
 
 ```bash
-# Clone the repository
+git clone https://github.com/hughesjs/sudo-mcp.git
+cd sudo-mcp
+chmod +x scripts/install.sh
+./scripts/install.sh
+```
+
+This installs sudo-mcp to `/usr/local/bin/sudo-mcp` with default configuration.
+
+### Manual Installation
+
+```bash
+# Clone and build
 git clone https://github.com/hughesjs/sudo-mcp.git
 cd sudo-mcp
 
-# Build the project
-dotnet build
+# Build self-contained binary
+dotnet publish src/SudoMcp/SudoMcp.csproj \
+    -c Release \
+    -r linux-x64 \
+    --self-contained \
+    -o ./publish \
+    /p:PublishSingleFile=true
 
-# Run directly (development)
-dotnet run --project src/SudoMcp/SudoMcp.csproj
+# Install system-wide
+sudo cp publish/SudoMcp /usr/local/bin/sudo-mcp
+sudo chmod +x /usr/local/bin/sudo-mcp
 
-# Or publish for production
-dotnet publish -c Release -r linux-x64 --self-contained -o ./publish
+# Set up configuration and logging
+sudo mkdir -p /etc/sudo-mcp
+sudo cp src/SudoMcp/Configuration/BlockedCommands.json /etc/sudo-mcp/
+sudo mkdir -p /var/log/sudo-mcp
+sudo chown $USER:$USER /var/log/sudo-mcp
+```
+
+### Verify Installation
+
+```bash
+sudo-mcp --help
+```
+
+### Uninstall
+
+```bash
+chmod +x scripts/uninstall.sh
+./scripts/uninstall.sh
 ```
 
 ## Command-Line Options
@@ -66,36 +99,33 @@ sudo-mcp supports the following command-line arguments for runtime configuration
 | `--blocklist-file <path>` | `-b` | Path to custom blocklist JSON file | `Configuration/BlockedCommands.json` |
 | `--no-blocklist` | - | **DANGEROUS**: Disable all command validation | `false` |
 | `--audit-log <path>` | `-a` | Path to audit log file | `/var/log/sudo-mcp/audit.log` |
-| `--timeout <seconds>` | `-t` | Command execution timeout in seconds | `300` (5 minutes) |
+| `--timeout <seconds>` | `-t` | Command execution timeout in seconds | `15` |
 
 ### Examples
 
 **Default configuration (with blocklist):**
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj
+sudo-mcp
 ```
 
 **Custom blocklist:**
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj -- \
-  --blocklist-file /path/to/custom-blocklist.json
+sudo-mcp --blocklist-file /path/to/custom-blocklist.json
 ```
 
 **No blocklist (MAXIMUM DANGER):**
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj -- --no-blocklist
+sudo-mcp --no-blocklist
 ```
 
 **Custom timeout and audit log:**
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj -- \
-  --timeout 600 \
-  --audit-log /var/log/sudo-mcp/custom-audit.log
+sudo-mcp --timeout 60 --audit-log /home/user/.sudo-mcp/audit.log
 ```
 
 **Display help:**
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj -- --help
+sudo-mcp --help
 ```
 
 ## Configuration
@@ -135,8 +165,7 @@ The default blocklist (`src/SudoMcp/Configuration/BlockedCommands.json`) prevent
 
 Create your own JSON file and pass it via `--blocklist-file`:
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj -- \
-  --blocklist-file /etc/sudo-mcp/my-blocklist.json
+sudo-mcp --blocklist-file /etc/sudo-mcp/my-blocklist.json
 ```
 
 **Disabling the blocklist:**
@@ -144,7 +173,7 @@ dotnet run --project src/SudoMcp/SudoMcp.csproj -- \
 ⚠️ **WARNING**: Only use `--no-blocklist` in isolated/test environments where you fully accept the risk.
 
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj -- --no-blocklist
+sudo-mcp --no-blocklist
 ```
 
 ### Audit Logging
@@ -164,8 +193,7 @@ All command execution attempts (both allowed and denied) are logged in JSON form
 
 **Custom log location:**
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj -- \
-  --audit-log /home/user/.sudo-mcp/audit.log
+sudo-mcp --audit-log /home/user/.sudo-mcp/audit.log
 ```
 
 **Ensure the log directory exists and is writable:**
@@ -174,97 +202,76 @@ sudo mkdir -p /var/log/sudo-mcp
 sudo chown $USER:$USER /var/log/sudo-mcp
 ```
 
-## Claude Desktop Integration
+## MCP Client Integration
 
-Add sudo-mcp to your Claude Desktop configuration file.
+After installation, configure your MCP client to use sudo-mcp.
+
+### Claude Desktop
 
 **Configuration file location:**
-- **Linux**: `~/.config/Claude/mcp.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**Basic configuration:**
+```json
+{
+  "mcpServers": {
+    "sudo-mcp": {
+      "command": "/usr/local/bin/sudo-mcp"
+    }
+  }
+}
+```
+
+**Custom configuration:**
+```json
+{
+  "mcpServers": {
+    "sudo-mcp": {
+      "command": "/usr/local/bin/sudo-mcp",
+      "args": [
+        "--blocklist-file",
+        "/home/YOUR_USERNAME/.config/sudo-mcp/blocklist.json",
+        "--timeout",
+        "30"
+      ]
+    }
+  }
+}
+```
+
+### Claude Code
+
+**Configuration file location:**
+- **Linux**: `~/.config/claude/mcp.json`
 - **macOS**: `~/Library/Application Support/Claude/mcp.json`
 
-### Development Setup (Default Blocklist)
-
+**Basic configuration:**
 ```json
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "dotnet",
-      "args": [
-        "run",
-        "--project",
-        "/home/james/repos/sudo-mcp/src/SudoMcp/SudoMcp.csproj"
-      ]
+      "command": "/usr/local/bin/sudo-mcp"
     }
   }
 }
 ```
 
-### Development Setup (Custom Blocklist)
+### Cursor
+
+Add to your Cursor MCP settings or project-specific `.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "dotnet",
-      "args": [
-        "run",
-        "--project",
-        "/home/james/repos/sudo-mcp/src/SudoMcp/SudoMcp.csproj",
-        "--",
-        "--blocklist-file",
-        "/home/james/.config/sudo-mcp/my-blocklist.json",
-        "--timeout",
-        "600"
-      ]
+      "command": "/usr/local/bin/sudo-mcp"
     }
   }
 }
 ```
 
-### Development Setup (No Blocklist - DANGER)
-
-```json
-{
-  "mcpServers": {
-    "sudo-mcp": {
-      "command": "dotnet",
-      "args": [
-        "run",
-        "--project",
-        "/home/james/repos/sudo-mcp/src/SudoMcp/SudoMcp.csproj",
-        "--",
-        "--no-blocklist"
-      ]
-    }
-  }
-}
-```
-
-### Production Setup (Published Binary)
-
-After publishing the application:
-
-```bash
-dotnet publish -c Release -r linux-x64 --self-contained -o /opt/sudo-mcp
-```
-
-```json
-{
-  "mcpServers": {
-    "sudo-mcp": {
-      "command": "/opt/sudo-mcp/SudoMcp",
-      "args": [
-        "--blocklist-file",
-        "/etc/sudo-mcp/blocklist.json",
-        "--audit-log",
-        "/var/log/sudo-mcp/audit.log"
-      ]
-    }
-  }
-}
-```
-
-**See [CLAUDE_DESKTOP_SETUP.md](CLAUDE_DESKTOP_SETUP.md) for detailed integration instructions.**
+**See [examples/](examples/) directory for more configuration examples.**
 
 ## Usage Examples
 

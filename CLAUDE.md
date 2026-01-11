@@ -131,23 +131,48 @@ Three validation strategies:
 
 ### Development
 
+For development, run directly from source:
 ```bash
-dotnet run --project src/SudoMcp/SudoMcp.csproj
+dotnet run --project src/SudoMcp/SudoMcp.csproj -- --help
 ```
 
-### Production Build
+### Production Installation
 
+Use the installation script:
 ```bash
-dotnet publish -c Release -r linux-x64 --self-contained -o ./publish
+chmod +x scripts/install.sh
+./scripts/install.sh
+```
+
+Or build manually:
+```bash
+dotnet publish src/SudoMcp/SudoMcp.csproj \
+    -c Release \
+    -r linux-x64 \
+    --self-contained \
+    -o ./publish \
+    /p:PublishSingleFile=true
+sudo cp publish/SudoMcp /usr/local/bin/sudo-mcp
 ```
 
 ### Testing Integration
 
-Add to Claude Desktop config (~/.config/Claude/mcp.json):
+Add to Claude Desktop/Code config:
 ```json
 {
   "mcpServers": {
     "sudo-mcp": {
+      "command": "/usr/local/bin/sudo-mcp"
+    }
+  }
+}
+```
+
+For development testing with `dotnet run`:
+```json
+{
+  "mcpServers": {
+    "sudo-mcp-dev": {
       "command": "dotnet",
       "args": ["run", "--project", "/path/to/sudo-mcp/src/SudoMcp/SudoMcp.csproj"]
     }
@@ -169,10 +194,12 @@ Add to Claude Desktop config (~/.config/Claude/mcp.json):
 
 1. Run full test suite: `dotnet test`
 2. Build in Release mode: `dotnet build -c Release`
-3. Test CLI: `dotnet run -- --help`
-4. Verify MCP integration with Claude Desktop
-5. Review SECURITY.md for accuracy
-6. Update version numbers if applicable
+3. Test installation script: `./scripts/install.sh`
+4. Test installed binary: `sudo-mcp --help`
+5. Verify MCP integration with Claude Desktop/Code/Cursor
+6. Review SECURITY.md for accuracy
+7. Test uninstall script: `./scripts/uninstall.sh`
+8. Update version numbers if applicable
 
 ## Resources
 
