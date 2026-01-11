@@ -75,43 +75,30 @@ jobs:
           if-no-files-found: error
 
   create-tarballs:
-    name: Create Release Tarballs
+    name: Create Tarball (${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: [version, build-binaries]
+    strategy:
+      matrix:
+        arch: [x64, arm64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download x64 binary
+      - name: Download binary
         uses: actions/download-artifact@v4
         with:
-          name: sudo-mcp-x64
-          path: ./artifacts/x64
+          name: sudo-mcp-${{ matrix.arch }}
+          path: ./artifacts
 
-      - name: Download ARM64 binary
-        uses: actions/download-artifact@v4
-        with:
-          name: sudo-mcp-arm64
-          path: ./artifacts/arm64
+      - name: Create tarball
+        run: ./scripts/create-tarball.sh --arch ${{ matrix.arch }} --version "${{ needs.version.outputs.version }}" --binary ./artifacts/SudoMcp
 
-      - name: Create x64 tarball
-        run: ./scripts/create-tarball.sh --arch x64 --version "${{ needs.version.outputs.version }}" --binary ./artifacts/x64/SudoMcp
-
-      - name: Create ARM64 tarball
-        run: ./scripts/create-tarball.sh --arch arm64 --version "${{ needs.version.outputs.version }}" --binary ./artifacts/arm64/SudoMcp
-
-      - name: Upload x64 tarball
+      - name: Upload tarball
         uses: actions/upload-artifact@v4
         with:
-          name: sudo-mcp-x64-tarball
-          path: sudo-mcp-x64-v${{ needs.version.outputs.version }}.tar.gz
-          if-no-files-found: error
-
-      - name: Upload ARM64 tarball
-        uses: actions/upload-artifact@v4
-        with:
-          name: sudo-mcp-arm64-tarball
-          path: sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
+          name: sudo-mcp-${{ matrix.arch }}-tarball
+          path: sudo-mcp-${{ matrix.arch }}-v${{ needs.version.outputs.version }}.tar.gz
           if-no-files-found: error
 
   generate-pkgbuild:
