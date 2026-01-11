@@ -67,10 +67,9 @@ rootCommand.SetHandler(async (blocklistFile, noBlocklist, auditLog, timeout) =>
 
         if (string.IsNullOrWhiteSpace(blocklistFile) || !File.Exists(blocklistFile))
         {
-            ILogger<CommandValidator> logger = sp.GetRequiredService<ILogger<CommandValidator>>();
-            logger.LogError("Blocklist file not found: {Path}", blocklistFile);
-            logger.LogWarning("Creating a disabled validator - ALL COMMANDS WILL BE ALLOWED");
-            return new(enabled: false);
+            throw new FileNotFoundException(
+                $"Blocklist file not found: {blocklistFile}. " +
+                "Use --no-blocklist to explicitly disable validation, or provide a valid blocklist file.");
         }
 
         IConfigurationRoot config = new ConfigurationBuilder()

@@ -11,7 +11,6 @@ public class AuditLogger
 {
     private readonly ILogger<AuditLogger> _logger;
     private readonly ExecutionOptions _options;
-    private static readonly SemaphoreSlim _fileLock = new(1, 1);
 
     public AuditLogger(ILogger<AuditLogger> logger, ExecutionOptions options)
     {
@@ -91,17 +90,9 @@ public class AuditLogger
                 WriteIndented = false
             });
 
-            await _fileLock.WaitAsync();
-            try
-            {
-                await File.AppendAllTextAsync(
-                    _options.AuditLogPath,
-                    json + Environment.NewLine);
-            }
-            finally
-            {
-                _fileLock.Release();
-            }
+            await File.AppendAllTextAsync(
+                _options.AuditLogPath,
+                json + Environment.NewLine);
         }
         catch (Exception ex)
         {

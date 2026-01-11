@@ -50,7 +50,7 @@ public class CommandValidator
 
         List<string> patterns = config.GetSection("RegexPatterns").Get<List<string>>() ?? [];
         _regexPatterns = patterns
-            .Select(p => new Regex(p, RegexOptions.Compiled | RegexOptions.IgnoreCase))
+            .Select(p => new Regex(p, RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1)))
             .ToList();
     }
 
