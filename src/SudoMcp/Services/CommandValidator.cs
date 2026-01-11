@@ -43,12 +43,12 @@ public class CommandValidator
             return;
         }
 
-        var config = configuration.GetSection("BlockedCommands");
+        IConfigurationSection config = configuration.GetSection("BlockedCommands");
 
         _exactMatches = config.GetSection("ExactMatches").Get<List<string>>() ?? [];
         _blockedBinaries = config.GetSection("BlockedBinaries").Get<List<string>>() ?? [];
 
-        var patterns = config.GetSection("RegexPatterns").Get<List<string>>() ?? [];
+        List<string> patterns = config.GetSection("RegexPatterns").Get<List<string>>() ?? [];
         _regexPatterns = patterns
             .Select(p => new Regex(p, RegexOptions.Compiled | RegexOptions.IgnoreCase))
             .ToList();
@@ -72,10 +72,10 @@ public class CommandValidator
             return ValidationResult.Denied("Command cannot be empty");
         }
 
-        var trimmedCommand = command.Trim();
+        string trimmedCommand = command.Trim();
 
         // Check exact matches
-        foreach (var blocked in _exactMatches)
+        foreach (string blocked in _exactMatches)
         {
             if (trimmedCommand.Equals(blocked, StringComparison.OrdinalIgnoreCase))
             {
@@ -84,7 +84,7 @@ public class CommandValidator
         }
 
         // Check regex patterns
-        foreach (var pattern in _regexPatterns)
+        foreach (Regex pattern in _regexPatterns)
         {
             if (pattern.IsMatch(trimmedCommand))
             {
@@ -93,12 +93,12 @@ public class CommandValidator
         }
 
         // Check binary name
-        var tokens = trimmedCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] tokens = trimmedCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length > 0)
         {
-            var binary = tokens[0];
+            string binary = tokens[0];
             // Check both just the binary name and the full path
-            var binaryName = Path.GetFileName(binary);
+            string binaryName = Path.GetFileName(binary);
 
             if (_blockedBinaries.Contains(binary, StringComparer.OrdinalIgnoreCase) ||
                 _blockedBinaries.Contains(binaryName, StringComparer.OrdinalIgnoreCase))

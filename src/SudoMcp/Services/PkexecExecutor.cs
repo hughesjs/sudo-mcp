@@ -27,7 +27,7 @@ public class PkexecExecutor
         int? timeoutSeconds = null,
         CancellationToken cancellationToken = default)
     {
-        var startInfo = new ProcessStartInfo
+        ProcessStartInfo startInfo = new()
         {
             FileName = "pkexec",
             Arguments = $"sudo -S -- {command}",
@@ -43,31 +43,26 @@ public class PkexecExecutor
 
         try
         {
-            using var process = new Process { StartInfo = startInfo };
-
-            // Create tasks to read stdout and stderr asynchronously
-            // This prevents deadlock when both streams fill their buffers
-            Task<string> stdoutTask;
-            Task<string> stderrTask;
-
+            using Process process = new();
+            process.StartInfo = startInfo;
             process.Start();
 
             // Start reading stdout and stderr immediately and asynchronously
-            stdoutTask = Task.Run(async () =>
+            Task<string> stdoutTask = Task.Run(async () =>
                 await process.StandardOutput.ReadToEndAsync(cancellationToken), cancellationToken);
-            stderrTask = Task.Run(async () =>
+            Task<string> stderrTask = Task.Run(async () =>
                 await process.StandardError.ReadToEndAsync(cancellationToken), cancellationToken);
 
             // Close stdin since pkexec doesn't need it for authentication (uses polkit agent)
             process.StandardInput.Close();
 
             // Wait for process to exit with timeout
-            var effectiveTimeout = timeoutSeconds ?? _options.TimeoutSeconds;
-            var timeout = TimeSpan.FromSeconds(effectiveTimeout);
-            var exitTask = process.WaitForExitAsync(cancellationToken);
-            var timeoutTask = Task.Delay(timeout, cancellationToken);
+            int effectiveTimeout = timeoutSeconds ?? _options.TimeoutSeconds;
+            TimeSpan timeout = TimeSpan.FromSeconds(effectiveTimeout);
+            Task exitTask = process.WaitForExitAsync(cancellationToken);
+            Task timeoutTask = Task.Delay(timeout, cancellationToken);
 
-            var completedTask = await Task.WhenAny(exitTask, timeoutTask);
+            Task completedTask = await Task.WhenAny(exitTask, timeoutTask);
 
             if (completedTask == timeoutTask)
             {
@@ -81,7 +76,7 @@ public class PkexecExecutor
                     // Process may have already exited
                 }
 
-                return new CommandExecutionResult
+                return new()
                 {
                     Success = false,
                     ExitCode = -1,
@@ -90,11 +85,11 @@ public class PkexecExecutor
             }
 
             // Wait for stdout and stderr tasks to complete
-            var stdout = await stdoutTask;
-            var stderr = await stderrTask;
-            var exitCode = process.ExitCode;
+            string stdout = await stdoutTask;
+            string stderr = await stderrTask;
+            int exitCode = process.ExitCode;
 
-            return new CommandExecutionResult
+            return new()
             {
                 Success = exitCode == 0,
                 StandardOutput = stdout,
@@ -111,7 +106,7 @@ public class PkexecExecutor
         }
         catch (OperationCanceledException)
         {
-            return new CommandExecutionResult
+            return new()
             {
                 Success = false,
                 ExitCode = -1,
@@ -120,7 +115,7 @@ public class PkexecExecutor
         }
         catch (Exception ex)
         {
-            return new CommandExecutionResult
+            return new()
             {
                 Success = false,
                 ExitCode = -1,

@@ -19,7 +19,7 @@ public class AuditLogger
         _options = options;
 
         // Ensure audit log directory exists
-        var logDirectory = Path.GetDirectoryName(_options.AuditLogPath);
+        string? logDirectory = Path.GetDirectoryName(_options.AuditLogPath);
         if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
         {
             try
@@ -38,7 +38,7 @@ public class AuditLogger
     /// </summary>
     public async Task LogExecutedCommand(string command, CommandExecutionResult result)
     {
-        var entry = new AuditLogEntry
+        AuditLogEntry entry = new()
         {
             Timestamp = DateTime.UtcNow,
             EventType = "CommandExecuted",
@@ -63,7 +63,7 @@ public class AuditLogger
     /// </summary>
     public async Task LogDeniedCommand(string command, string reason)
     {
-        var entry = new AuditLogEntry
+        AuditLogEntry entry = new()
         {
             Timestamp = DateTime.UtcNow,
             EventType = "CommandDenied",
@@ -87,7 +87,7 @@ public class AuditLogger
     {
         try
         {
-            var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions
+            string json = JsonSerializer.Serialize(entry, new JsonSerializerOptions
             {
                 WriteIndented = false
             });
