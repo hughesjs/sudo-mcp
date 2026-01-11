@@ -13,24 +13,23 @@ public sealed class SudoMcpContainerFixture : IAsyncLifetime
     private IFutureDockerImage? _image;
     private IContainer? _container;
     private const string BinaryPath = "/usr/local/bin/sudo-mcp";
-    private const string ImageName = "sudo-mcp-test";
 
     public async Task InitializeAsync()
     {
-        // Build Docker image from Dockerfile (cached between test runs)
+        // Build Docker image from Dockerfile
+        // No image name specified - TestContainers generates unique name each run
+        // Docker's layer cache still provides fast rebuilds when source unchanged
         _image = new ImageFromDockerfileBuilder()
             .WithDockerfileDirectory(CommonDirectoryPath.GetSolutionDirectory(), string.Empty)
             .WithDockerfile("src/SudoMcp.Tests/Integration/Dockerfile")
-            .WithName(ImageName)
-            .WithCleanUp(false)  // Keep image cached for faster subsequent runs
+            .WithCleanUp(true)  // Clean up image after tests
             .Build();
 
         await _image.CreateAsync().ConfigureAwait(false);
 
         // Create container from built image
         // Wait for dbus to be running (required for polkit/pkexec)
-        _container = new ContainerBuilder()
-            .WithImage(_image)
+        _container = new ContainerBuilder(_image)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilCommandIsCompleted("pgrep", "-x", "dbus-daemon"))
             .WithCleanUp(true)

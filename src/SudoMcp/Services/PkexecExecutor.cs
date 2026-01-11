@@ -27,16 +27,25 @@ public class PkexecExecutor
         int? timeoutSeconds = null,
         CancellationToken cancellationToken = default)
     {
+        // Use ArgumentList to pass arguments directly without shell parsing
+        // This avoids complex escaping issues with ProcessStartInfo.Arguments
         ProcessStartInfo startInfo = new()
         {
             FileName = "pkexec",
-            Arguments = $"sudo -S -- {command}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+
+        // Each argument passed separately - no shell escaping needed
+        startInfo.ArgumentList.Add("sudo");
+        startInfo.ArgumentList.Add("-S");
+        startInfo.ArgumentList.Add("--");
+        startInfo.ArgumentList.Add("bash");
+        startInfo.ArgumentList.Add("-c");
+        startInfo.ArgumentList.Add(command);  // Command passed directly to bash
         
         startInfo.Environment["PKEXEC_UID"] = Environment.GetEnvironmentVariable("UID") ?? "0";
 

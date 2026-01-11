@@ -1,14 +1,9 @@
 using System.Text.Json;
 using FluentAssertions;
 using SudoMcp.Models;
-using Xunit;
 
 namespace SudoMcp.Tests.Integration;
 
-/// <summary>
-/// Integration tests that validate the full MCP protocol end-to-end
-/// These tests actually communicate with sudo-mcp via JSON-RPC 2.0
-/// </summary>
 [Trait("Category", "Integration")]
 public sealed class McpProtocolTests : IClassFixture<SudoMcpContainerFixture>
 {
@@ -19,18 +14,13 @@ public sealed class McpProtocolTests : IClassFixture<SudoMcpContainerFixture>
         _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
     }
 
-    #region Protocol Basics
-
     [Fact]
-    public async Task ToolDiscovery_ListTools_Returnsexecute_sudo_command()
+    public async Task ListToolsReturnsExecuteSudoCommand()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.ListToolsAsync();
 
-        // Assert
         response.RootElement.GetProperty("jsonrpc").GetString().Should().Be("2.0");
         response.RootElement.TryGetProperty("result", out JsonElement result).Should().BeTrue();
 
@@ -44,53 +34,33 @@ public sealed class McpProtocolTests : IClassFixture<SudoMcpContainerFixture>
     }
 
     [Fact]
-    public async Task ToolCall_ValidJsonRpc_ReturnsValidResponse()
+    public async Task ValidJsonRpcReturnsValidResponse()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "echo 'test'",
             timeoutSeconds = 15
         });
 
-        // Assert
         response.RootElement.GetProperty("jsonrpc").GetString().Should().Be("2.0");
         response.RootElement.TryGetProperty("result", out _).Should().BeTrue();
         JsonRpcHelper.IsError(response).Should().BeFalse();
     }
 
-    #endregion
-
-    #region Safe Command Execution
-
     [Fact]
-    public async Task execute_sudo_command_WhoAmI_ReturnsRoot()
+    public async Task WhoAmIReturnsRoot()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "whoami",
             timeoutSeconds = 15
         });
 
-        // Assert
-        response.RootElement.GetProperty("jsonrpc").GetString().Should().Be("2.0");
-
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        resultText.Should().NotBeNullOrWhiteSpace();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
         result.StandardOutput.Should().Contain("root");
@@ -98,27 +68,18 @@ public sealed class McpProtocolTests : IClassFixture<SudoMcpContainerFixture>
     }
 
     [Fact]
-    public async Task execute_sudo_command_Echo_ReturnsCorrectOutput()
+    public async Task EchoReturnsCorrectOutput()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
         const string testMessage = "Hello from MCP integration test!";
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = $"echo '{testMessage}'",
             timeoutSeconds = 15
         });
 
-        // Assert
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
         result.StandardOutput.Should().Contain(testMessage);
@@ -126,222 +87,189 @@ public sealed class McpProtocolTests : IClassFixture<SudoMcpContainerFixture>
     }
 
     [Fact]
-    public async Task execute_sudo_command_Id_ShowsUid0()
+    public async Task IdShowsUid0()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "id -u",
             timeoutSeconds = 15
         });
 
-        // Assert
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
-        result.StandardOutput.Should().Contain("0");  // root uid
+        result.StandardOutput.Should().Contain("0");
         result.ExitCode.Should().Be(0);
     }
 
     [Fact]
-    public async Task execute_sudo_command_ReadRootFile_Succeeds()
+    public async Task ReadRootFileSucceeds()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
-            command = "cat /etc/shadow | head -1",
+            command = "head -1 /etc/shadow",
             timeoutSeconds = 15
         });
 
-        // Assert
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
-        result.StandardOutput.Should().NotBeNullOrEmpty();  // Can read root-only file
+        result.StandardOutput.Should().NotBeNullOrEmpty();
         result.ExitCode.Should().Be(0);
     }
 
-    #endregion
-
-    #region Blocklist Enforcement
-
     [Fact]
-    public async Task execute_sudo_command_RmRfRoot_IsBlocked()
+    public async Task PipedCommandProcessesPipeCorrectly()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
+        JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
+        {
+            command = @"echo -e 'line1\nline2\nline3' | wc -l",
+            timeoutSeconds = 15
+        });
+
+        CommandExecutionResult? result = ParseResult(response);
+        result.Should().NotBeNull();
+        result!.Success.Should().BeTrue();
+        result.StandardOutput!.Trim().Should().Be("3");
+        result.ExitCode.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task MultipleSudoWithPipesExecutesCorrectly()
+    {
+        await using McpTestClient client = await _fixture.CreateMcpClientAsync();
+
+        JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
+        {
+            command = "sudo cat /etc/shadow | sudo head -1 | sudo wc -c",
+            timeoutSeconds = 15
+        });
+
+        CommandExecutionResult? result = ParseResult(response);
+        result.Should().NotBeNull();
+        result!.Success.Should().BeTrue();
+        result.StandardOutput!.Trim().Should().NotBeEmpty();
+        result.ExitCode.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RmRfRootIsBlocked()
+    {
+        await using McpTestClient client = await _fixture.CreateMcpClientAsync();
+
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "rm -rf /",
             timeoutSeconds = 15
         });
 
-        // Assert
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("blocked");
     }
 
     [Fact]
-    public async Task execute_sudo_command_MkfsCommand_IsBlocked()
+    public async Task MkfsCommandIsBlocked()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "mkfs.ext4 /dev/sda1",
             timeoutSeconds = 15
         });
 
-        // Assert
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("blocked");
     }
 
     [Fact]
-    public async Task execute_sudo_command_DangerousDd_IsBlocked()
+    public async Task DangerousDdIsBlocked()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "dd if=/dev/zero of=/dev/sda bs=1M",
             timeoutSeconds = 15
         });
 
-        // Assert
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("blocked");
     }
 
     [Fact]
-    public async Task execute_sudo_command_Cryptsetup_IsBlocked()
+    public async Task CryptsetupIsBlocked()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "cryptsetup luksFormat /dev/sda1",
             timeoutSeconds = 15
         });
 
-        // Assert
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("blocked");
     }
 
-    #endregion
-
-    #region Error Handling
 
     [Fact]
-    public async Task execute_sudo_command_NonExistentCommand_ReturnsError()
+    public async Task NonExistentCommandReturnsError()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "this-command-does-not-exist-12345",
             timeoutSeconds = 15
         });
 
-        // Assert
-        string? resultText = response.RootElement
-            .GetProperty("result")
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString();
-
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
+        CommandExecutionResult? result = ParseResult(response);
         result.Should().NotBeNull();
         result!.Success.Should().BeFalse();
         result.ExitCode.Should().NotBe(0);
     }
 
     [Fact]
-    public async Task execute_sudo_command_NonZeroExit_ReturnsExitCode()
+    public async Task NonZeroExitReturnsExitCode()
     {
-        // Arrange
         await using McpTestClient client = await _fixture.CreateMcpClientAsync();
 
-        // Act - false command always returns exit code 1
         JsonDocument response = await client.SendToolCallAsync("execute_sudo_command", new
         {
             command = "false",
             timeoutSeconds = 15
         });
 
-        // Assert
+        CommandExecutionResult? result = ParseResult(response);
+        result.Should().NotBeNull();
+        result!.Success.Should().BeFalse();
+        result.ExitCode.Should().Be(1);
+    }
+
+
+    private static CommandExecutionResult? ParseResult(JsonDocument response)
+    {
         string? resultText = response.RootElement
             .GetProperty("result")
             .GetProperty("content")[0]
             .GetProperty("text")
             .GetString();
 
-        CommandExecutionResult? result = JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
-        result.Should().NotBeNull();
-        result!.Success.Should().BeFalse();
-        result.ExitCode.Should().Be(1);
+        return JsonSerializer.Deserialize<CommandExecutionResult>(resultText!);
     }
-
-    #endregion
 }
