@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sudo-mcp": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "/home/james/repos/sudo-mcp/src/SudoMcp/SudoMcp.csproj"
+      ]
+    }
+  }
+}
