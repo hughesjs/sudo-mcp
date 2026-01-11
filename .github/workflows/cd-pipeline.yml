@@ -18,7 +18,7 @@ jobs:
     name: Calculate Semantic Version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.semver.outputs.version }}
+      version: ${{ steps.semver.outputs.nextStrict }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
