@@ -436,9 +436,22 @@ dotnet build
 
 ### Running Tests
 
+**All Tests** (requires Docker):
 ```bash
 dotnet test
 ```
+
+**Unit Tests Only** (fast, no Docker):
+```bash
+dotnet test --filter "Category!=Integration"
+```
+
+**Integration Tests Only** (requires Docker):
+```bash
+dotnet test --filter "Category=Integration"
+```
+
+Tests use [TestContainers.NET](https://dotnet.testcontainers.org/) to automatically manage Docker containers. See [src/SudoMcp.Tests/Integration/README.md](src/SudoMcp.Tests/Integration/README.md) for details.
 
 ### Project Structure
 

@@ -11,15 +11,16 @@ public class AuditLogger
 {
     private readonly ILogger<AuditLogger> _logger;
     private readonly ExecutionOptions _options;
+    private readonly Lazy<string?> _logDirectory;
 
     public AuditLogger(ILogger<AuditLogger> logger, ExecutionOptions options)
     {
         _logger = logger;
         _options = options;
-
-        string? logDirectory = Path.GetDirectoryName(_options.AuditLogPath);
-        if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
+        _logDirectory = new(() =>
         {
+            string? logDirectory = Path.GetDirectoryName(_options.AuditLogPath);
+            if (string.IsNullOrEmpty(logDirectory) || Directory.Exists(logDirectory)) return logDirectory;
             try
             {
                 Directory.CreateDirectory(logDirectory);
@@ -28,7 +29,8 @@ public class AuditLogger
             {
                 _logger.LogWarning(ex, "Failed to create audit log directory: {Directory}", logDirectory);
             }
-        }
+            return logDirectory;
+        });
     }
 
     /// <summary>
@@ -83,6 +85,9 @@ public class AuditLogger
     /// </summary>
     private async Task WriteAuditEntry(AuditLogEntry entry)
     {
+        // Access lazy property to ensure directory exists
+        _ = _logDirectory.Value;
+
         try
         {
             string json = JsonSerializer.Serialize(entry, new JsonSerializerOptions
