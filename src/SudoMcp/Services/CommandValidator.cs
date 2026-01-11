@@ -61,7 +61,6 @@ public class CommandValidator
     /// <returns>A validation result indicating whether the command is allowed.</returns>
     public ValidationResult ValidateCommand(string command)
     {
-        // If validation is disabled, allow everything
         if (!_enabled)
         {
             return ValidationResult.Allowed();
@@ -74,7 +73,6 @@ public class CommandValidator
 
         string trimmedCommand = command.Trim();
 
-        // Check exact matches
         foreach (string blocked in _exactMatches)
         {
             if (trimmedCommand.Equals(blocked, StringComparison.OrdinalIgnoreCase))
@@ -83,7 +81,6 @@ public class CommandValidator
             }
         }
 
-        // Check regex patterns
         foreach (Regex pattern in _regexPatterns)
         {
             if (pattern.IsMatch(trimmedCommand))
@@ -92,12 +89,10 @@ public class CommandValidator
             }
         }
 
-        // Check binary name
         string[] tokens = trimmedCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length > 0)
         {
             string binary = tokens[0];
-            // Check both just the binary name and the full path
             string binaryName = Path.GetFileName(binary);
 
             if (_blockedBinaries.Contains(binary, StringComparer.OrdinalIgnoreCase) ||

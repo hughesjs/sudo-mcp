@@ -37,8 +37,7 @@ public class PkexecExecutor
             UseShellExecute = false,
             CreateNoWindow = true
         };
-
-        // Add environment variables that might be useful
+        
         startInfo.Environment["PKEXEC_UID"] = Environment.GetEnvironmentVariable("UID") ?? "0";
 
         try
@@ -47,7 +46,6 @@ public class PkexecExecutor
             process.StartInfo = startInfo;
             process.Start();
 
-            // Start reading stdout and stderr immediately and asynchronously
             Task<string> stdoutTask = Task.Run(async () =>
                 await process.StandardOutput.ReadToEndAsync(cancellationToken), cancellationToken);
             Task<string> stderrTask = Task.Run(async () =>
@@ -56,7 +54,6 @@ public class PkexecExecutor
             // Close stdin since pkexec doesn't need it for authentication (uses polkit agent)
             process.StandardInput.Close();
 
-            // Wait for process to exit with timeout
             int effectiveTimeout = timeoutSeconds ?? _options.TimeoutSeconds;
             TimeSpan timeout = TimeSpan.FromSeconds(effectiveTimeout);
             Task exitTask = process.WaitForExitAsync(cancellationToken);
@@ -66,14 +63,12 @@ public class PkexecExecutor
 
             if (completedTask == timeoutTask)
             {
-                // Timeout occurred
                 try
                 {
                     process.Kill(entireProcessTree: true);
                 }
                 catch
                 {
-                    // Process may have already exited
                 }
 
                 return new()
@@ -83,8 +78,7 @@ public class PkexecExecutor
                     ErrorMessage = $"Command execution timed out after {effectiveTimeout} seconds"
                 };
             }
-
-            // Wait for stdout and stderr tasks to complete
+            
             string stdout = await stdoutTask;
             string stderr = await stderrTask;
             int exitCode = process.ExitCode;

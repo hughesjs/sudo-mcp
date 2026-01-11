@@ -47,15 +47,12 @@ public class SudoExecutionTool
         [Description("Command execution timeout in seconds (default: 15)")] int timeoutSeconds = 15,
         CancellationToken cancellationToken = default)
     {
-        // Validate the command
         ValidationResult validationResult = _validator.ValidateCommand(command);
 
         if (!validationResult.IsValid)
         {
-            // Log denied command
             await _auditLogger.LogDeniedCommand(command, validationResult.Reason ?? "Unknown reason");
 
-            // Return error response
             var deniedResult = new
             {
                 Success = false,
@@ -71,13 +68,10 @@ public class SudoExecutionTool
             });
         }
 
-        // Execute the command with the specified timeout
         CommandExecutionResult result = await _executor.ExecuteWithPkexec(command, timeoutSeconds, cancellationToken);
 
-        // Log the execution
         await _auditLogger.LogExecutedCommand(command, result);
 
-        // Return the result as JSON
         return JsonSerializer.Serialize(result, new JsonSerializerOptions
         {
             WriteIndented = true

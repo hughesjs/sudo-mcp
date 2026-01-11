@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using SudoMcp.Models;
 using SudoMcp.Services;
 
-// Define command-line options
 Option<string?> blocklistFileOption = new(
     aliases: ["--blocklist-file", "-b"],
     description: "Path to blocklist JSON file",
@@ -44,23 +43,19 @@ rootCommand.SetHandler(async (blocklistFile, noBlocklist, auditLog, timeout) =>
         options.LogToStandardErrorThreshold = LogLevel.Trace;
     });
 
-    // Load appsettings.json for logging configuration
     builder.Configuration.AddJsonFile("Configuration/appsettings.json", optional: true, reloadOnChange: false);
 
-    // Register MCP server with stdio transport
     builder.Services
         .AddMcpServer()
         .WithStdioServerTransport()
         .WithToolsFromAssembly();
 
-    // Register ExecutionOptions as a singleton
     builder.Services.AddSingleton(new ExecutionOptions
     {
         AuditLogPath = auditLog,
         TimeoutSeconds = timeout
     });
 
-    // Register CommandValidator
     builder.Services.AddSingleton<CommandValidator>(sp =>
     {
         if (noBlocklist)
@@ -85,7 +80,6 @@ rootCommand.SetHandler(async (blocklistFile, noBlocklist, auditLog, timeout) =>
         return new(config, enabled: true);
     });
 
-    // Register other services
     builder.Services.AddScoped<PkexecExecutor>();
     builder.Services.AddScoped<AuditLogger>();
 

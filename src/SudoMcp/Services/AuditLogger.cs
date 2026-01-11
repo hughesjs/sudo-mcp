@@ -18,7 +18,6 @@ public class AuditLogger
         _logger = logger;
         _options = options;
 
-        // Ensure audit log directory exists
         string? logDirectory = Path.GetDirectoryName(_options.AuditLogPath);
         if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
         {
@@ -92,7 +91,6 @@ public class AuditLogger
                 WriteIndented = false
             });
 
-            // Use semaphore to ensure thread-safe file writes
             await _fileLock.WaitAsync();
             try
             {
