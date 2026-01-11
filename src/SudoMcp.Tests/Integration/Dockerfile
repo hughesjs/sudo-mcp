@@ -34,20 +34,25 @@ RUN mkdir -p /etc/polkit-1/rules.d && \
     echo '    }' >> /etc/polkit-1/rules.d/50-sudo-mcp-test.rules && \
     echo '});' >> /etc/polkit-1/rules.d/50-sudo-mcp-test.rules
 
-# Copy binary from build stage
-COPY --from=build /app/publish/SudoMcp /usr/local/bin/sudo-mcp
-RUN chmod +x /usr/local/bin/sudo-mcp
+# Copy binary and install script to staging directory
+WORKDIR /tmp/install
+COPY --from=build /app/publish/SudoMcp ./sudo-mcp
+COPY scripts/install.sh ./install.sh
+RUN chmod +x ./sudo-mcp ./install.sh
 
-# Create audit log directory
-RUN mkdir -p /var/log/sudo-mcp && \
-    chown testuser:testuser /var/log/sudo-mcp
+# Run install script
+RUN ./install.sh
 
 # Create entrypoint to start dbus
 RUN printf '#!/bin/bash\nmkdir -p /run/dbus\ndbus-daemon --system --fork\nsleep 0.5\nexec "$@"\n' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
-# Verify binary was created
-RUN test -f /usr/local/bin/sudo-mcp && echo "✓ sudo-mcp binary installed successfully"
+# Fix log directory ownership for testuser
+RUN chown testuser:testuser /var/log/sudo-mcp
 
+# Cleanup staging directory
+RUN rm -rf /tmp/install
+
+WORKDIR /
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["sleep", "infinity"]
