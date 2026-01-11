@@ -48,3 +48,76 @@ jobs:
         with:
           name: integration-test-results
           path: "**/TestResults/**"
+
+  build-tarballs:
+    name: Build Tarballs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Build x64 binary
+        run: |
+          dotnet publish src/SudoMcp/SudoMcp.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained \
+            -o ./publish/x64 \
+            /p:PublishSingleFile=true
+
+      - name: Build arm64 binary
+        run: |
+          dotnet publish src/SudoMcp/SudoMcp.csproj \
+            -c Release \
+            -r linux-arm64 \
+            --self-contained \
+            -o ./publish/arm64 \
+            /p:PublishSingleFile=true
+
+      - name: Create x64 tarball
+        run: ./scripts/create-tarball.sh --arch x64 --version 0.0.0-ci --binary ./publish/x64/SudoMcp
+
+      - name: Create arm64 tarball
+        run: ./scripts/create-tarball.sh --arch arm64 --version 0.0.0-ci --binary ./publish/arm64/SudoMcp
+
+      - name: Upload x64 tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarball-x64
+          path: sudo-mcp-x64-v0.0.0-ci.tar.gz
+
+      - name: Upload arm64 tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarball-arm64
+          path: sudo-mcp-arm64-v0.0.0-ci.tar.gz
+
+  test-install:
+    name: Test Install (${{ matrix.arch.name }})
+    needs: build-tarballs
+    runs-on: ${{ matrix.arch.runner }}
+    strategy:
+      matrix:
+        arch:
+          - name: x64
+            runner: ubuntu-latest
+          - name: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: tarball-${{ matrix.arch.name }}
+
+      - name: Test install script
+        run: |
+          tar -xzf "sudo-mcp-${{ matrix.arch.name }}-v0.0.0-ci.tar.gz"
+          cd "sudo-mcp-${{ matrix.arch.name }}-v0.0.0-ci"
+          ./install.sh
+          /usr/local/bin/sudo-mcp --help

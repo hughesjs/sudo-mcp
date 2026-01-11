@@ -95,52 +95,10 @@ jobs:
           path: ./artifacts/arm64
 
       - name: Create x64 tarball
-        run: |
-          VERSION="${{ needs.version.outputs.version }}"
-          TARBALL_DIR="sudo-mcp-x64-v${VERSION}"
-          mkdir -p "${TARBALL_DIR}"
-
-          # Copy binary and make executable
-          cp ./artifacts/x64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
-          chmod +x "${TARBALL_DIR}/sudo-mcp"
-
-          # Copy scripts and make executable
-          cp scripts/install.sh "${TARBALL_DIR}/"
-          cp scripts/uninstall.sh "${TARBALL_DIR}/"
-          chmod +x "${TARBALL_DIR}/install.sh"
-          chmod +x "${TARBALL_DIR}/uninstall.sh"
-
-          # Copy documentation
-          cp README.md "${TARBALL_DIR}/"
-          cp SECURITY.md "${TARBALL_DIR}/"
-          cp LICENSE "${TARBALL_DIR}/"
-
-          # Create tarball
-          tar -czf "sudo-mcp-x64-v${VERSION}.tar.gz" "${TARBALL_DIR}"
+        run: ./scripts/create-tarball.sh --arch x64 --version "${{ needs.version.outputs.version }}" --binary ./artifacts/x64/SudoMcp
 
       - name: Create ARM64 tarball
-        run: |
-          VERSION="${{ needs.version.outputs.version }}"
-          TARBALL_DIR="sudo-mcp-arm64-v${VERSION}"
-          mkdir -p "${TARBALL_DIR}"
-
-          # Copy binary and make executable
-          cp ./artifacts/arm64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
-          chmod +x "${TARBALL_DIR}/sudo-mcp"
-
-          # Copy scripts and make executable
-          cp scripts/install.sh "${TARBALL_DIR}/"
-          cp scripts/uninstall.sh "${TARBALL_DIR}/"
-          chmod +x "${TARBALL_DIR}/install.sh"
-          chmod +x "${TARBALL_DIR}/uninstall.sh"
-
-          # Copy documentation
-          cp README.md "${TARBALL_DIR}/"
-          cp SECURITY.md "${TARBALL_DIR}/"
-          cp LICENSE "${TARBALL_DIR}/"
-
-          # Create tarball
-          tar -czf "sudo-mcp-arm64-v${VERSION}.tar.gz" "${TARBALL_DIR}"
+        run: ./scripts/create-tarball.sh --arch arm64 --version "${{ needs.version.outputs.version }}" --binary ./artifacts/arm64/SudoMcp
 
       - name: Upload x64 tarball
         uses: actions/upload-artifact@v4
