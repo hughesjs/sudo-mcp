@@ -137,11 +137,13 @@ jobs:
           - name: x64
             runner: ubuntu-latest
             tarball: tarball-x64
+            image: archlinux:latest
           - name: arm64
             runner: ubuntu-24.04-arm
             tarball: tarball-arm64
+            image: agners/archlinuxarm:latest  # Community ARM64 image
     container:
-      image: archlinux:latest
+      image: ${{ matrix.arch.image }}
     steps:
       - name: Install dependencies
         run: |
