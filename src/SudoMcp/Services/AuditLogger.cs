@@ -11,17 +11,16 @@ public class AuditLogger
 {
     private readonly ILogger<AuditLogger> _logger;
     private readonly ExecutionOptions _options;
-    private static readonly SemaphoreSlim _fileLock = new(1, 1);
+    private readonly Lazy<string?> _logDirectory;
 
     public AuditLogger(ILogger<AuditLogger> logger, ExecutionOptions options)
     {
         _logger = logger;
         _options = options;
-
-        // Ensure audit log directory exists
-        var logDirectory = Path.GetDirectoryName(_options.AuditLogPath);
-        if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
+        _logDirectory = new(() =>
         {
+            string? logDirectory = Path.GetDirectoryName(_options.AuditLogPath);
+            if (string.IsNullOrEmpty(logDirectory) || Directory.Exists(logDirectory)) return logDirectory;
             try
             {
                 Directory.CreateDirectory(logDirectory);
@@ -30,7 +29,8 @@ public class AuditLogger
             {
                 _logger.LogWarning(ex, "Failed to create audit log directory: {Directory}", logDirectory);
             }
-        }
+            return logDirectory;
+        });
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ public class AuditLogger
     /// </summary>
     public async Task LogExecutedCommand(string command, CommandExecutionResult result)
     {
-        var entry = new AuditLogEntry
+        AuditLogEntry entry = new()
         {
             Timestamp = DateTime.UtcNow,
             EventType = "CommandExecuted",
@@ -63,7 +63,7 @@ public class AuditLogger
     /// </summary>
     public async Task LogDeniedCommand(string command, string reason)
     {
-        var entry = new AuditLogEntry
+        AuditLogEntry entry = new()
         {
             Timestamp = DateTime.UtcNow,
             EventType = "CommandDenied",
@@ -85,25 +85,19 @@ public class AuditLogger
     /// </summary>
     private async Task WriteAuditEntry(AuditLogEntry entry)
     {
+        // Access lazy property to ensure directory exists
+        _ = _logDirectory.Value;
+
         try
         {
-            var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions
+            string json = JsonSerializer.Serialize(entry, new JsonSerializerOptions
             {
                 WriteIndented = false
             });
 
-            // Use semaphore to ensure thread-safe file writes
-            await _fileLock.WaitAsync();
-            try
-            {
-                await File.AppendAllTextAsync(
-                    _options.AuditLogPath,
-                    json + Environment.NewLine);
-            }
-            finally
-            {
-                _fileLock.Release();
-            }
+            await File.AppendAllTextAsync(
+                _options.AuditLogPath,
+                json + Environment.NewLine);
         }
         catch (Exception ex)
         {

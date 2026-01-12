@@ -1,0 +1,201 @@
+name: CI Tests
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Run unit tests
+        run: dotnet test --filter "Category!=Integration"
+
+  integration-tests:
+    name: Integration Tests (TestContainers)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Run integration tests
+        run: dotnet test --filter "Category=Integration" --logger "console;verbosity=detailed"
+        # TestContainers automatically uses Docker on the runner
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: "**/TestResults/**"
+
+  build-tarballs:
+    name: Build Tarballs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Build x64 binary
+        run: |
+          dotnet publish src/SudoMcp/SudoMcp.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained \
+            -o ./publish/x64 \
+            /p:PublishSingleFile=true
+
+      - name: Build arm64 binary
+        run: |
+          dotnet publish src/SudoMcp/SudoMcp.csproj \
+            -c Release \
+            -r linux-arm64 \
+            --self-contained \
+            -o ./publish/arm64 \
+            /p:PublishSingleFile=true
+
+      - name: Create x64 tarball
+        run: ./scripts/create-tarball.sh --arch x64 --version 0.0.0 --binary ./publish/x64/SudoMcp
+
+      - name: Create arm64 tarball
+        run: ./scripts/create-tarball.sh --arch arm64 --version 0.0.0 --binary ./publish/arm64/SudoMcp
+
+      - name: Upload x64 tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarball-x64
+          path: sudo-mcp-x64-v0.0.0.tar.gz
+
+      - name: Upload arm64 tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarball-arm64
+          path: sudo-mcp-arm64-v0.0.0.tar.gz
+
+  test-install:
+    name: Test Install (${{ matrix.arch.name }})
+    needs: build-tarballs
+    runs-on: ${{ matrix.arch.runner }}
+    strategy:
+      matrix:
+        arch:
+          - name: x64
+            runner: ubuntu-latest
+          - name: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y policykit-1
+
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: tarball-${{ matrix.arch.name }}
+
+      - name: Test install script
+        run: |
+          tar -xzf "sudo-mcp-${{ matrix.arch.name }}-v0.0.0.tar.gz"
+          cd "sudo-mcp-${{ matrix.arch.name }}-v0.0.0"
+          ./install.sh
+          /usr/local/bin/sudo-mcp --help
+
+  test-pkgbuild-x64:
+    name: Test PKGBUILD (x64)
+    needs: build-tarballs
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel sudo polkit
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: tarball-x64
+
+      - name: Generate PKGBUILD
+        run: ./scripts/generate-pkgbuild.sh 0.0.0 --local-source "$PWD" > PKGBUILD
+
+      - name: Create builder user
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+
+      - name: Build and install package
+        run: |
+          sudo -u builder makepkg -si --noconfirm
+
+      - name: Verify installation
+        run: /usr/local/bin/sudo-mcp --help
+
+  test-pkgbuild-arm64:
+    name: Test PKGBUILD (arm64)
+    needs: build-tarballs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: tarball-arm64
+
+      - name: Build and test in ARM64 Arch
+        uses: uraimo/run-on-arch-action@v3
+        with:
+          arch: aarch64
+          distro: archarm_latest
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            --volume "${{ github.workspace }}:/workspace"
+          run: |
+            cd /workspace
+            # Disable Landlock sandbox (doesn't work in containers/QEMU)
+            sed -i 's/#DisableSandbox/DisableSandbox/' /etc/pacman.conf || true
+            echo "DisableSandbox" >> /etc/pacman.conf
+            pacman-key --init
+            pacman-key --populate archlinuxarm
+            pacman -Syu --noconfirm
+            pacman -S --noconfirm base-devel sudo polkit
+            ./scripts/generate-pkgbuild.sh 0.0.0 --local-source "$PWD" > PKGBUILD
+            useradd -m builder
+            echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+            chown -R builder:builder .
+            sudo -u builder makepkg -si --noconfirm
+            /usr/local/bin/sudo-mcp --help

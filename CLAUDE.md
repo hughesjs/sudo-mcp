@@ -26,9 +26,11 @@ src/SudoMcp/
 ├── Models/
 │   ├── ExecutionOptions.cs
 │   ├── CommandExecutionResult.cs
-│   └── AuditLogEntry.cs
+│   ├── AuditLogEntry.cs
+│   ├── BlocklistConfiguration.cs  # Runtime blocklist model
+│   └── BlocklistDto.cs            # JSON deserialization DTO
 └── Configuration/
-    ├── BlockedCommands.json    # Dangerous command patterns
+    ├── DefaultBlocklist.cs     # Embedded default blocklist (source-generated regex)
     └── appsettings.json        # Logging config
 ```
 
@@ -65,6 +67,46 @@ src/SudoMcp/
 - **Security tests** for blocklist bypass attempts
 - Test with `--no-blocklist` flag behaviour
 
+### Running Tests
+
+#### Unit Tests
+
+Run fast unit tests without privilege escalation:
+```bash
+dotnet test --filter "Category!=Integration"
+```
+
+#### Integration Tests
+
+Run full privilege escalation tests using TestContainers:
+```bash
+# Run all tests (TestContainers manages Docker automatically)
+dotnet test
+
+# Run only integration tests
+dotnet test --filter "Category=Integration"
+```
+
+**Requirements**:
+- Docker installed and running
+- .NET 10 SDK
+- TestContainers automatically builds and manages Docker containers
+- No `--privileged` mode needed - polkit configured for internal auth
+
+**How It Works**:
+1. xUnit starts test
+2. TestContainers builds custom Docker image from `Dockerfile.integration-test`
+3. Container started (no `--privileged` needed - polkit configured for passwordless auth)
+4. Tests execute commands inside container via `ExecAsync()`
+5. Container automatically cleaned up after tests
+
+**Test Structure**:
+- `src/SudoMcp.Tests/Integration/SudoMcpContainerFixture.cs` - TestContainers lifecycle management
+- `src/SudoMcp.Tests/Integration/PkexecIntegrationTests.cs` - Privilege escalation tests
+- `src/SudoMcp.Tests/Integration/BlocklistIntegrationTests.cs` - Command validation tests
+- `src/SudoMcp.Tests/Integration/Dockerfile.integration-test` - Docker test environment
+- `src/SudoMcp.Tests/Integration/README.md` - Integration test documentation
+
 ## Important Implementation Details
 
 ### MCP Tool Registration
@@ -92,17 +134,29 @@ builder.Logging.AddConsole(options =>
 
 Three validation strategies:
 1. **ExactMatches**: Fast, specific commands
-2. **RegexPatterns**: Pattern matching for classes of operations
+2. **RegexPatterns**: Pattern matching for classes of operations (with 1-second timeout to prevent ReDoS)
 3. **BlockedBinaries**: Block specific executables
+
+**Embedded Default Blocklist:**
+- Default blocklist is compiled into the binary using source-generated regex
+- No external configuration files required for basic operation
+- Use `--blocklist-file` to override with a custom JSON blocklist
+- Use `--no-blocklist` to disable all validation (dangerous)
+
+**ReDoS Protection:**
+- All regex patterns have a 1-second timeout to prevent catastrophic backtracking
+- Protects against malicious inputs designed to cause denial of service
+- Source-generated regex in `DefaultBlocklist.cs` with `matchTimeoutMilliseconds: 1000`
 
 ## Common Tasks
 
 ### Adding a New Blocked Command Pattern
 
-1. Edit `src/SudoMcp/Configuration/BlockedCommands.json`
+1. Edit `src/SudoMcp/Configuration/DefaultBlocklist.cs`
 2. Add to appropriate section (ExactMatches, RegexPatterns, or BlockedBinaries)
-3. Test with `CommandValidatorTests.cs`
-4. Document in SECURITY.md
+3. For regex patterns, add a new `[GeneratedRegex]` partial method
+4. Test with `CommandValidatorTests.cs`
+5. Document in SECURITY.md
 
 ### Changing Default Timeout
 
@@ -290,13 +344,13 @@ makepkg -si
 
 ### CI for Pull Requests
 
-**Not yet implemented** - will be added when tests are written.
+**Workflow**: `.github/workflows/ci-tests.yml`
 
-Future CI will:
-- Run tests on all PRs
-- Build both architectures to catch compile errors
-- Validate blocklist JSON configuration
-- Check code formatting and linting
+Runs on all PRs and pushes to master:
+- **Unit tests**: Fast tests without Docker (`dotnet test --filter "Category!=Integration"`)
+- **Integration tests**: Full privilege escalation tests using TestContainers (`dotnet test --filter "Category=Integration"`)
+- Uploads test results as artifacts
+- Uses .NET 10 preview on Ubuntu runners
 
 ## Resources
 

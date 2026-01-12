@@ -1,0 +1,38 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+**/TestResults/
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+**/logs/
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# GitHub
+.github/
+
+# Test outputs
+/tmp/
+
+# Package files (will be restored during build)
+packages/

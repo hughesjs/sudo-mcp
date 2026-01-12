@@ -1,6 +1,10 @@
 # sudo-mcp
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/hughesjs/sudo-mcp/ci-pipeline.yml?style=for-the-badge&label=CI)](https://github.com/hughesjs/sudo-mcp/actions/workflows/ci-pipeline.yml)
+[![CD Pipeline](https://img.shields.io/github/actions/workflow/status/hughesjs/sudo-mcp/cd-pipeline.yml?style=for-the-badge&label=CD)](https://github.com/hughesjs/sudo-mcp/actions/workflows/cd-pipeline.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/releases/latest)
+[![License](https://img.shields.io/github/license/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/blob/master/LICENSE)
+[![Made in Scotland](https://raw.githubusercontent.com/hughesjs/custom-badges/master/made-in/made-in-scotland.svg)](https://github.com/hughesjs/custom-badges)
 
 MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo and pkexec.
 
@@ -100,9 +104,7 @@ dotnet publish src/SudoMcp/SudoMcp.csproj \
 sudo cp publish/SudoMcp /usr/local/bin/sudo-mcp
 sudo chmod +x /usr/local/bin/sudo-mcp
 
-# Set up configuration and logging
-sudo mkdir -p /etc/sudo-mcp
-sudo cp src/SudoMcp/Configuration/BlockedCommands.json /etc/sudo-mcp/
+# Set up log directory
 sudo mkdir -p /var/log/sudo-mcp
 sudo chown $USER:$USER /var/log/sudo-mcp
 ```
@@ -126,7 +128,7 @@ sudo-mcp supports the following command-line arguments for runtime configuration
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--blocklist-file <path>` | `-b` | Path to custom blocklist JSON file | `Configuration/BlockedCommands.json` |
+| `--blocklist-file <path>` | `-b` | Path to custom blocklist JSON file | Embedded default |
 | `--no-blocklist` | - | **DANGEROUS**: Disable all command validation | `false` |
 | `--audit-log <path>` | `-a` | Path to audit log file | `/var/log/sudo-mcp/audit.log` |
 | `--timeout <seconds>` | `-t` | Command execution timeout in seconds | `15` |
@@ -162,7 +164,7 @@ sudo-mcp --help
 
 ### Blocklist Configuration
 
-The default blocklist (`src/SudoMcp/Configuration/BlockedCommands.json`) prevents execution of dangerous commands using three strategies:
+sudo-mcp includes an embedded default blocklist that prevents execution of dangerous commands using three strategies:
 
 1. **Exact Matches** - Specific dangerous commands (e.g., `rm -rf /`)
 2. **Regex Patterns** - Pattern-based blocking for classes of operations
@@ -436,9 +438,22 @@ dotnet build
 
 ### Running Tests
 
+**All Tests** (requires Docker):
 ```bash
 dotnet test
 ```
+
+**Unit Tests Only** (fast, no Docker):
+```bash
+dotnet test --filter "Category!=Integration"
+```
+
+**Integration Tests Only** (requires Docker):
+```bash
+dotnet test --filter "Category=Integration"
+```
+
+Tests use [TestContainers.NET](https://dotnet.testcontainers.org/) to automatically manage Docker containers. See [src/SudoMcp.Tests/Integration/README.md](src/SudoMcp.Tests/Integration/README.md) for details.
 
 ### Project Structure
 

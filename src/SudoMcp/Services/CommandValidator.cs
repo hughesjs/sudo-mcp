@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Configuration;
+using SudoMcp.Models;
 
 namespace SudoMcp.Services;
 
@@ -10,48 +10,25 @@ namespace SudoMcp.Services;
 public class CommandValidator
 {
     private readonly bool _enabled;
-    private readonly List<string> _exactMatches;
-    private readonly List<Regex> _regexPatterns;
-    private readonly List<string> _blockedBinaries;
+    private readonly BlocklistConfiguration? _blocklist;
 
     /// <summary>
     /// Creates a disabled validator that allows all commands.
     /// </summary>
-    /// <param name="enabled">Whether validation is enabled. If false, all commands pass validation.</param>
-    public CommandValidator(bool enabled = true)
+    public CommandValidator()
     {
-        _enabled = enabled;
-        _exactMatches = [];
-        _regexPatterns = [];
-        _blockedBinaries = [];
+        _enabled = false;
+        _blocklist = null;
     }
 
     /// <summary>
-    /// Creates a validator with blocklist loaded from configuration.
+    /// Creates a validator with the specified blocklist configuration.
     /// </summary>
-    /// <param name="configuration">Configuration containing the BlockedCommands section.</param>
-    /// <param name="enabled">Whether validation is enabled.</param>
-    public CommandValidator(IConfiguration configuration, bool enabled = true)
+    /// <param name="blocklist">The blocklist configuration with pre-compiled patterns.</param>
+    public CommandValidator(BlocklistConfiguration blocklist)
     {
-        _enabled = enabled;
-
-        if (!_enabled)
-        {
-            _exactMatches = [];
-            _regexPatterns = [];
-            _blockedBinaries = [];
-            return;
-        }
-
-        var config = configuration.GetSection("BlockedCommands");
-
-        _exactMatches = config.GetSection("ExactMatches").Get<List<string>>() ?? [];
-        _blockedBinaries = config.GetSection("BlockedBinaries").Get<List<string>>() ?? [];
-
-        var patterns = config.GetSection("RegexPatterns").Get<List<string>>() ?? [];
-        _regexPatterns = patterns
-            .Select(p => new Regex(p, RegexOptions.Compiled | RegexOptions.IgnoreCase))
-            .ToList();
+        _enabled = true;
+        _blocklist = blocklist;
     }
 
     /// <summary>
@@ -61,8 +38,7 @@ public class CommandValidator
     /// <returns>A validation result indicating whether the command is allowed.</returns>
     public ValidationResult ValidateCommand(string command)
     {
-        // If validation is disabled, allow everything
-        if (!_enabled)
+        if (!_enabled || _blocklist is null)
         {
             return ValidationResult.Allowed();
         }
@@ -72,10 +48,9 @@ public class CommandValidator
             return ValidationResult.Denied("Command cannot be empty");
         }
 
-        var trimmedCommand = command.Trim();
+        string trimmedCommand = command.Trim();
 
-        // Check exact matches
-        foreach (var blocked in _exactMatches)
+        foreach (string blocked in _blocklist.ExactMatches)
         {
             if (trimmedCommand.Equals(blocked, StringComparison.OrdinalIgnoreCase))
             {
@@ -83,8 +58,7 @@ public class CommandValidator
             }
         }
 
-        // Check regex patterns
-        foreach (var pattern in _regexPatterns)
+        foreach (Regex pattern in _blocklist.RegexPatterns)
         {
             if (pattern.IsMatch(trimmedCommand))
             {
@@ -92,16 +66,14 @@ public class CommandValidator
             }
         }
 
-        // Check binary name
-        var tokens = trimmedCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] tokens = trimmedCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length > 0)
         {
-            var binary = tokens[0];
-            // Check both just the binary name and the full path
-            var binaryName = Path.GetFileName(binary);
+            string binary = tokens[0];
+            string binaryName = Path.GetFileName(binary);
 
-            if (_blockedBinaries.Contains(binary, StringComparer.OrdinalIgnoreCase) ||
-                _blockedBinaries.Contains(binaryName, StringComparer.OrdinalIgnoreCase))
+            if (_blocklist.BlockedBinaries.Contains(binary, StringComparer.OrdinalIgnoreCase) ||
+                _blocklist.BlockedBinaries.Contains(binaryName, StringComparer.OrdinalIgnoreCase))
             {
                 return ValidationResult.Denied($"Binary '{binary}' is blocked");
             }
