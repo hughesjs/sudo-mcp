@@ -10,21 +10,24 @@
 
 MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo and pkexec.
 
-## ⚠️ SECURITY WARNING
-
-**This is an inherently dangerous tool.** By design, it allows an AI model to execute commands with root privileges on your system. While basic safeguards can be configured (command blocklist, audit logging), **NO SECURITY MEASURE IS PERFECT**.
-
-**USE AT YOUR OWN RISK.** This tool could potentially:
-- **Destroy data** through file system operations
-- **Compromise system security** by modifying critical configurations
-- **Modify or delete critical system files** including kernel and boot files
-- **Execute malicious commands** if the blocklist is bypassed or disabled
-- **Escalate privileges** beyond what you intended
-- **Expose sensitive information** through command output
-
-**The `--no-blocklist` flag removes ALL command validation. Using this option gives the AI unrestricted root access to your system.**
-
-**You have been warned.**
+> [!CAUTION]
+> ## <img src="https://i.gifer.com/ULMC.gif" width="20"> SECURITY WARNING <img src="https://i.gifer.com/ULMC.gif" width="20">
+>
+> As G.K. Chesterton said: "Don't ever take a fence down until you know the reason it was put up". 
+> 
+> **This is an inherently dangerous tool.** By design, it allows an AI model to execute commands with root privileges on your system. While basic safeguards can be configured (command blocklist, audit logging), **NO SECURITY MEASURE IS PERFECT**.
+> 
+> **USE AT YOUR OWN RISK.** This tool could potentially:
+> - **Destroy data** through file system operations
+> - **Compromise system security** by modifying critical configurations
+> - **Modify or delete critical system files** including kernel and boot files
+> - **Execute malicious commands** if the blocklist is bypassed or disabled
+> - **Escalate privileges** beyond what you intended
+> - **Expose sensitive information** through command output
+> 
+> **The `--no-blocklist` flag removes ALL command validation. Using this option gives the AI unrestricted root access to your system.**
+> 
+> **You have been warned.**
 
 ## Overview
 
