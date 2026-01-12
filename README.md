@@ -2,7 +2,7 @@
 
 [![CI Pipeline](https://img.shields.io/github/actions/workflow/status/hughesjs/sudo-mcp/ci-pipeline.yml?style=for-the-badge&label=CI)](https://github.com/hughesjs/sudo-mcp/actions/workflows/ci-pipeline.yml)
 [![CD Pipeline](https://img.shields.io/github/actions/workflow/status/hughesjs/sudo-mcp/cd-pipeline.yml?style=for-the-badge&label=CD)](https://github.com/hughesjs/sudo-mcp/actions/workflows/cd-pipeline.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/releases/latest)
+[![AUR Version](https://img.shields.io/aur/version/sudo-mcp?style=for-the-badge&logo=arch-linux&color=1793d1)](https://aur.archlinux.org/packages/sudo-mcp)
 [![License](https://img.shields.io/github/license/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/blob/master/LICENSE)
 [![Made in Scotland](https://raw.githubusercontent.com/hughesjs/custom-badges/master/made-in/made-in-scotland.svg)](https://github.com/hughesjs/custom-badges)
 
@@ -91,7 +91,7 @@ chmod +x scripts/install.sh
 ./scripts/install.sh
 ```
 
-This builds from source and installs to `/usr/local/bin/sudo-mcp` with default configuration.
+This builds from source and installs to `/usr/bin/sudo-mcp` with default configuration.
 
 ### Manual Build and Installation
 
@@ -109,8 +109,8 @@ dotnet publish src/SudoMcp/SudoMcp.csproj \
     /p:PublishSingleFile=true
 
 # Install system-wide
-sudo cp publish/SudoMcp /usr/local/bin/sudo-mcp
-sudo chmod +x /usr/local/bin/sudo-mcp
+sudo cp publish/SudoMcp /usr/bin/sudo-mcp
+sudo chmod +x /usr/bin/sudo-mcp
 
 # Set up log directory
 sudo mkdir -p /var/log/sudo-mcp
@@ -271,7 +271,7 @@ After installation, configure your MCP client to use sudo-mcp.
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp"
+      "command": "/usr/bin/sudo-mcp"
     }
   }
 }
@@ -282,7 +282,7 @@ After installation, configure your MCP client to use sudo-mcp.
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp",
+      "command": "/usr/bin/sudo-mcp",
       "args": [
         "--blocklist-file",
         "/home/YOUR_USERNAME/.config/sudo-mcp/blocklist.json",
@@ -305,7 +305,7 @@ After installation, configure your MCP client to use sudo-mcp.
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp"
+      "command": "/usr/bin/sudo-mcp"
     }
   }
 }
@@ -319,7 +319,7 @@ Add to your Cursor MCP settings or project-specific `.cursor/mcp.json`:
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp"
+      "command": "/usr/bin/sudo-mcp"
     }
   }
 }
