@@ -3,6 +3,8 @@
 [![CI Pipeline](https://img.shields.io/github/actions/workflow/status/hughesjs/sudo-mcp/ci-pipeline.yml?style=for-the-badge&label=CI)](https://github.com/hughesjs/sudo-mcp/actions/workflows/ci-pipeline.yml)
 [![CD Pipeline](https://img.shields.io/github/actions/workflow/status/hughesjs/sudo-mcp/cd-pipeline.yml?style=for-the-badge&label=CD)](https://github.com/hughesjs/sudo-mcp/actions/workflows/cd-pipeline.yml)
 [![AUR Version](https://img.shields.io/aur/version/sudo-mcp?style=for-the-badge&logo=arch-linux&color=1793d1)](https://aur.archlinux.org/packages/sudo-mcp)
+[![AUR Votes](https://img.shields.io/aur/votes/sudo-mcp?style=for-the-badge&logo=arch-linux)](https://aur.archlinux.org/packages/sudo-mcp)
+[![AUR Popularity](https://img.shields.io/aur/popularity/sudo-mcp?style=for-the-badge&logo=arch-linux)](https://aur.archlinux.org/packages/sudo-mcp)
 [![License](https://img.shields.io/github/license/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/blob/master/LICENSE)
 [![Made in Scotland](https://raw.githubusercontent.com/hughesjs/custom-badges/master/made-in/made-in-scotland.svg)](https://github.com/hughesjs/custom-badges)
 
