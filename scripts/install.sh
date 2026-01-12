@@ -30,7 +30,7 @@ sudo chmod 755 "$INSTALL_DIR/sudo-mcp"
 
 # Create log directory
 sudo mkdir -p "$LOG_DIR"
-sudo chown "$USER:$USER" "$LOG_DIR"
+sudo chown "$(whoami):$(whoami)" "$LOG_DIR"
 
 echo "Installed to $INSTALL_DIR/sudo-mcp"
 echo "Log directory: $LOG_DIR"
