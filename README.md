@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/github/license/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/blob/master/LICENSE)
 [![Made in Scotland](https://raw.githubusercontent.com/hughesjs/custom-badges/master/made-in/made-in-scotland.svg)](https://github.com/hughesjs/custom-badges)
 
-MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo and pkexec.
+MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo and pkexec. When you attempt to run an elevated command your configured polkit agent will interactively prompt for your password.
 
 > [!CAUTION]
 > ## <img src="https://i.gifer.com/ULMC.gif" width="20"> SECURITY WARNING <img src="https://i.gifer.com/ULMC.gif" width="20">
