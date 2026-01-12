@@ -104,8 +104,8 @@ jobs:
           cp ./artifacts/x64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
           chmod +x "${TARBALL_DIR}/sudo-mcp"
 
-          # Copy configuration
-          cp src/SudoMcp/Configuration/BlockedCommands.json "${TARBALL_DIR}/"
+          # Note: Default blocklist is embedded in the binary (DefaultBlocklist.cs)
+          # Users can provide custom blocklists via --blocklist-file if needed
 
           # Copy scripts and make executable
           cp scripts/install.sh "${TARBALL_DIR}/"
@@ -131,8 +131,8 @@ jobs:
           cp ./artifacts/arm64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
           chmod +x "${TARBALL_DIR}/sudo-mcp"
 
-          # Copy configuration
-          cp src/SudoMcp/Configuration/BlockedCommands.json "${TARBALL_DIR}/"
+          # Note: Default blocklist is embedded in the binary (DefaultBlocklist.cs)
+          # Users can provide custom blocklists via --blocklist-file if needed
 
           # Copy scripts and make executable
           cp scripts/install.sh "${TARBALL_DIR}/"
