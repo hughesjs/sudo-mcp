@@ -128,9 +128,18 @@ jobs:
           /usr/local/bin/sudo-mcp --help
 
   test-pkgbuild:
-    name: Test PKGBUILD (Arch Linux)
+    name: Test PKGBUILD (${{ matrix.arch.name }})
     needs: build-tarballs
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch.runner }}
+    strategy:
+      matrix:
+        arch:
+          - name: x64
+            runner: ubuntu-latest
+            tarball: tarball-x64
+          - name: arm64
+            runner: ubuntu-24.04-arm
+            tarball: tarball-arm64
     container:
       image: archlinux:latest
     steps:
@@ -142,10 +151,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download x64 tarball
+      - name: Download tarball
         uses: actions/download-artifact@v4
         with:
-          name: tarball-x64
+          name: ${{ matrix.arch.tarball }}
 
       - name: Generate PKGBUILD
         run: ./scripts/generate-pkgbuild.sh 0.0.0 --local-source "$PWD" > PKGBUILD
