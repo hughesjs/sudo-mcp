@@ -121,3 +121,39 @@ jobs:
           cd "sudo-mcp-${{ matrix.arch.name }}-v0.0.0-ci"
           ./install.sh
           /usr/local/bin/sudo-mcp --help
+
+  test-pkgbuild:
+    name: Test PKGBUILD (Arch Linux)
+    needs: build-tarballs
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel sudo polkit
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download x64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: tarball-x64
+
+      - name: Generate PKGBUILD
+        run: ./scripts/generate-pkgbuild.sh 0.0.0-ci --local-source "$PWD" > PKGBUILD
+
+      - name: Create builder user
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+
+      - name: Build and install package
+        run: |
+          sudo -u builder makepkg -si --noconfirm
+
+      - name: Verify installation
+        run: /usr/local/bin/sudo-mcp --help
