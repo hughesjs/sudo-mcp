@@ -54,7 +54,7 @@ Restart Claude Code and approve polkit authentication prompts when commands exec
 
 ## Prerequisites
 
-- **.NET 10 SDK** - Install from [dotnet.microsoft.com](https://dotnet.microsoft.com/)
+- **(If Building) .NET 10 SDK** - Install from [dotnet.microsoft.com](https://dotnet.microsoft.com/)
 - **Linux** - This tool requires polkit/pkexec (Linux-only)
 - **Polkit authentication agent** - Required for graphical authentication (typically included in desktop environments)
 - **Claude Desktop** - Or any MCP-compatible client
