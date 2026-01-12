@@ -206,12 +206,14 @@ jobs:
             --sha256-arm64 "${{ steps.checksums.outputs.sha256_arm64 }}" \
             > PKGBUILD
 
+
+
       - name: Generate .SRCINFO
         run: |
           # makepkg requires non-root user
           useradd -m builder
-          chown builder:builder PKGBUILD
-          su builder -c "makepkg --printsrcinfo" > .SRCINFO
+          chown -R builder:builder .
+          su builder -c 'makepkg --printsrcinfo > .SRCINFO'
 
       - name: Upload PKGBUILD
         uses: actions/upload-artifact@v4
@@ -225,6 +227,7 @@ jobs:
         with:
           name: srcinfo
           path: .SRCINFO
+          include-hidden-files: true
           if-no-files-found: error
 
   create-tag:
