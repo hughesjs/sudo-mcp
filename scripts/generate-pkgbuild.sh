@@ -46,6 +46,7 @@ arch=('x86_64' 'aarch64')
 url="https://github.com/hughesjs/sudo-mcp"
 license=('MIT')
 depends=('polkit' 'sudo')
+options=('!strip')  # .NET single-file bundles are destroyed by strip
 source_x86_64=("${SOURCE_LINE_X64}")
 source_aarch64=("${SOURCE_LINE_ARM64}")
 sha256sums_x86_64=('SKIP')
