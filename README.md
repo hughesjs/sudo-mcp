@@ -1,8 +1,10 @@
 # sudo-mcp
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/hughesjs/sudo-mcp/actions/workflows/ci-pipeline.yml/badge.svg)](https://github.com/hughesjs/sudo-mcp/actions/workflows/ci-pipeline.yml)
-[![CD](https://github.com/hughesjs/sudo-mcp/actions/workflows/cd-pipeline.yml/badge.svg)](https://github.com/hughesjs/sudo-mcp/actions/workflows/cd-pipeline.yml)
+[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/hughesjs/sudo-mcp/ci-pipeline.yml?style=for-the-badge&label=CI)](https://github.com/hughesjs/sudo-mcp/actions/workflows/ci-pipeline.yml)
+[![CD Pipeline](https://img.shields.io/github/actions/workflow/status/hughesjs/sudo-mcp/cd-pipeline.yml?style=for-the-badge&label=CD)](https://github.com/hughesjs/sudo-mcp/actions/workflows/cd-pipeline.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/releases/latest)
+[![License](https://img.shields.io/github/license/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/blob/master/LICENSE)
+[![Made in Scotland](https://raw.githubusercontent.com/hughesjs/custom-badges/master/made-in/made-in-scotland.svg)](https://github.com/hughesjs/custom-badges)
 
 MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo and pkexec.
 
