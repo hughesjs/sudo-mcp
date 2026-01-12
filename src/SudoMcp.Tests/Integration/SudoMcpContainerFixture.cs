@@ -12,7 +12,7 @@ public sealed class SudoMcpContainerFixture : IAsyncLifetime
 {
     private IFutureDockerImage? _image;
     private IContainer? _container;
-    private const string BinaryPath = "/usr/local/bin/sudo-mcp";
+    private const string BinaryPath = "/usr/bin/sudo-mcp";
 
     public async Task InitializeAsync()
     {

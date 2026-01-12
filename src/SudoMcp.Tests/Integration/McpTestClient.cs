@@ -8,7 +8,7 @@ namespace SudoMcp.Tests.Integration;
 /// </summary>
 public sealed class McpTestClient : IAsyncDisposable
 {
-    private const string BinaryPath = "/usr/local/bin/sudo-mcp";
+    private const string BinaryPath = "/usr/bin/sudo-mcp";
     private const string AuditLogPath = "/var/log/sudo-mcp/audit.log";
 
     private readonly IContainer _container;

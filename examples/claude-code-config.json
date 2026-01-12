@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp"
+      "command": "/usr/bin/sudo-mcp"
     },
     "sudo-mcp-custom": {
-      "command": "/usr/local/bin/sudo-mcp",
+      "command": "/usr/bin/sudo-mcp",
       "args": [
         "--blocklist-file",
         "/home/YOUR_USERNAME/.config/sudo-mcp/blocklist.json",
@@ -13,7 +13,7 @@
       ]
     },
     "sudo-mcp-no-blocklist": {
-      "command": "/usr/local/bin/sudo-mcp",
+      "command": "/usr/bin/sudo-mcp",
       "args": [
         "--no-blocklist"
       ]

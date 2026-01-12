@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="/usr/bin"
 LOG_DIR="/var/log/sudo-mcp"
 
 echo "Installing sudo-mcp..."

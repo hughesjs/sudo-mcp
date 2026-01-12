@@ -37,6 +37,18 @@ sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP clie
 - ⚙️ **Runtime Configuration** - Command-line arguments for blocklist, timeouts, and logging
 - 🚀 **.NET 10** - Built on the latest .NET platform with C# 12
 
+## Quick Start (Claude Code)
+
+**Arch Linux:**
+```bash
+yay -S sudo-mcp                            # Install from AUR
+claude mcp add sudo-mcp /usr/bin/sudo-mcp  # Configure Claude Code
+```
+
+**Other Linux distributions:** Download from [releases](https://github.com/hughesjs/sudo-mcp/releases/latest), extract, run `./install.sh`, then use `claude mcp add`.
+
+Restart Claude Code and approve polkit authentication prompts when commands execute. **Read the [security warning](#%EF%B8%8F-security-warning) above before use.**
+
 ## Prerequisites
 
 - **.NET 10 SDK** - Install from [dotnet.microsoft.com](https://dotnet.microsoft.com/)
@@ -298,11 +310,26 @@ After installation, configure your MCP client to use sudo-mcp.
 
 ### Claude Code
 
-**Configuration file location:**
-- **Linux**: `~/.config/claude/mcp.json`
-- **macOS**: `~/Library/Application Support/Claude/mcp.json`
+**Using the CLI (Recommended):**
 
-**Basic configuration:**
+After installing the binary, simply run:
+```bash
+claude mcp add sudo-mcp /usr/bin/sudo-mcp
+```
+
+This automatically configures sudo-mcp in your Claude Code settings.
+
+**With custom arguments:**
+```bash
+claude mcp add sudo-mcp /usr/bin/sudo-mcp -- --timeout 30 --blocklist-file /path/to/custom-blocklist.json
+```
+
+**Manual configuration:**
+
+Alternatively, you can manually edit the configuration file:
+- **Linux**: `~/.config/claude/config.json`
+- **macOS**: `~/Library/Application Support/Claude/config.json`
+
 ```json
 {
   "mcpServers": {
