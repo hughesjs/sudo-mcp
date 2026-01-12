@@ -51,7 +51,7 @@ cat << EOF
 pkgname=sudo-mcp
 pkgver=${VERSION}
 pkgrel=1
-pkgdesc="MCP server for privileged command execution via sudo/pkexec"
+pkgdesc="⚠️ INHERENTLY UNSAFE: MCP server allowing AI models to execute privileged commands via sudo/pkexec"
 arch=('x86_64' 'aarch64')
 url="https://github.com/hughesjs/sudo-mcp"
 license=('MIT')
