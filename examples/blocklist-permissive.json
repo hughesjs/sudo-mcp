@@ -1,0 +1,20 @@
+{
+  "BlockedCommands": {
+    "ExactMatches": [
+      "rm -rf /",
+      "rm -rf /*"
+    ],
+    "RegexPatterns": [
+      "^rm\\s+(-rf?|-fr|--recursive)\\s+/\\s*$",
+      "^dd\\s+if=.+\\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]).*$",
+      "^>(\\s*)?/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]).*$"
+    ],
+    "BlockedBinaries": [
+      "mkfs.ext2",
+      "mkfs.ext3",
+      "mkfs.ext4",
+      "mkfs.xfs",
+      "mkfs.btrfs"
+    ]
+  }
+}

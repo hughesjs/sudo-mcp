@@ -134,10 +134,13 @@ jobs:
     container:
       image: archlinux:latest
     steps:
-      - name: Install dependencies
+      - name: Disable pacman sandbox and install dependencies
         run: |
+          # Disable Landlock sandbox (doesn't work in containers)
+          sed -i 's/#DisableSandbox/DisableSandbox/' /etc/pacman.conf || true
+          echo "DisableSandbox" >> /etc/pacman.conf
           pacman -Syu --noconfirm
-          pacman -S --noconfirm base-devel sudo polkit
+          pacman -S --noconfirm base-devel sudo polkit git
 
       - name: Checkout code
         uses: actions/checkout@v4

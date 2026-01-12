@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 <version> [--local-source <path>]" >&2
+    echo "Usage: $0 <version> [--local-source <path>] [--sha256-x64 <hash>] [--sha256-arm64 <hash>]" >&2
     exit 1
 }
 
@@ -12,12 +12,22 @@ fi
 
 VERSION="$1"
 LOCAL_SOURCE=""
+SHA256_X64="SKIP"
+SHA256_ARM64="SKIP"
 
 shift
 while [[ $# -gt 0 ]]; do
     case $1 in
         --local-source)
             LOCAL_SOURCE="$2"
+            shift 2
+            ;;
+        --sha256-x64)
+            SHA256_X64="$2"
+            shift 2
+            ;;
+        --sha256-arm64)
+            SHA256_ARM64="$2"
             shift 2
             ;;
         *)
@@ -49,8 +59,8 @@ depends=('polkit' 'sudo')
 options=('!strip')  # .NET single-file bundles are destroyed by strip
 source_x86_64=("${SOURCE_LINE_X64}")
 source_aarch64=("${SOURCE_LINE_ARM64}")
-sha256sums_x86_64=('SKIP')
-sha256sums_aarch64=('SKIP')
+sha256sums_x86_64=('${SHA256_X64}')
+sha256sums_aarch64=('${SHA256_ARM64}')
 
 package() {
     case "\$CARCH" in

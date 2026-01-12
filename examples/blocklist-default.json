@@ -1,0 +1,43 @@
+{
+  "BlockedCommands": {
+    "ExactMatches": [
+      "rm -rf /",
+      "rm -rf /*",
+      "rm -fr /",
+      "rm -fr /*",
+      "mkfs",
+      "dd",
+      ":(){:|:&};:"
+    ],
+    "RegexPatterns": [
+      "^rm\\s+(-rf?|-fr|--recursive)\\s+/\\s*$",
+      "^rm\\s+(-rf?|-fr|--recursive)\\s+/\\*\\s*$",
+      "^dd\\s+if=.+\\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]).*$",
+      "^dd\\s+if=/dev/zero\\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]).*$",
+      "^>(\\s*)?/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]).*$",
+      "^mkfs\\..*",
+      "^(chmod|chown)\\s+(-R|--recursive)\\s+.*/\\s*$",
+      ":.*\\(.*\\).*\\{.*\\|.*&.*\\}.*:",
+      "(wget|curl).*\\|.*(sh|bash|zsh|fish)\\s*$",
+      "^fdisk\\s+/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]).*$",
+      "^parted\\s+/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]).*$",
+      "^wipefs\\s+.*",
+      "^mv\\s+.*\\s+/dev/null\\s*$"
+    ],
+    "BlockedBinaries": [
+      "mkfs.ext2",
+      "mkfs.ext3",
+      "mkfs.ext4",
+      "mkfs.xfs",
+      "mkfs.btrfs",
+      "mkfs.fat",
+      "mkfs.vfat",
+      "mkfs.ntfs",
+      "shred",
+      "cryptsetup",
+      "wipefs",
+      "sgdisk",
+      "gdisk"
+    ]
+  }
+}

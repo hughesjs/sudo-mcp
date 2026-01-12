@@ -46,31 +46,39 @@ sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP clie
 
 ### Binary Release (Recommended)
 
-Download the latest pre-built binary for your architecture:
+**Step 1**: Visit the [Releases Page](https://github.com/hughesjs/sudo-mcp/releases/latest) to download the latest version for your architecture.
+
+**Step 2**: Extract and install:
 
 **x86_64 (Intel/AMD)**:
 ```bash
-curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/sudo-mcp-x64-v0.1.0.tar.gz
-tar -xzf sudo-mcp-x64-v0.1.0.tar.gz
-cd sudo-mcp-x64-v0.1.0
+# Replace VERSION with the version you downloaded (e.g., 0.1.0)
+tar -xzf sudo-mcp-x64-vVERSION.tar.gz
+cd sudo-mcp-x64-vVERSION
 chmod +x install.sh
 ./install.sh
 ```
 
 **ARM64 (aarch64)**:
 ```bash
-curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/sudo-mcp-arm64-v0.1.0.tar.gz
-tar -xzf sudo-mcp-arm64-v0.1.0.tar.gz
-cd sudo-mcp-arm64-v0.1.0
+# Replace VERSION with the version you downloaded (e.g., 0.1.0)
+tar -xzf sudo-mcp-arm64-vVERSION.tar.gz
+cd sudo-mcp-arm64-vVERSION
 chmod +x install.sh
 ./install.sh
 ```
 
-### Arch Linux
+### Arch Linux (AUR)
 
-Using the provided PKGBUILD:
+**From AUR** (Recommended):
 ```bash
-curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/PKGBUILD
+yay -S sudo-mcp
+```
+
+**Manual PKGBUILD**:
+
+If you prefer to build manually, visit the [Releases Page](https://github.com/hughesjs/sudo-mcp/releases/latest), download the PKGBUILD, and run:
+```bash
 makepkg -si
 ```
 
