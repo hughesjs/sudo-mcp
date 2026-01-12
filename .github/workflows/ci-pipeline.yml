@@ -127,28 +127,15 @@ jobs:
           ./install.sh
           /usr/local/bin/sudo-mcp --help
 
-  test-pkgbuild:
-    name: Test PKGBUILD (${{ matrix.arch.name }})
+  test-pkgbuild-x64:
+    name: Test PKGBUILD (x64)
     needs: build-tarballs
-    runs-on: ${{ matrix.arch.runner }}
-    strategy:
-      matrix:
-        arch:
-          - name: x64
-            runner: ubuntu-latest
-            tarball: tarball-x64
-            image: archlinux:latest
-          - name: arm64
-            runner: ubuntu-24.04-arm
-            tarball: tarball-arm64
-            image: agners/archlinuxarm:latest  # Community ARM64 image
+    runs-on: ubuntu-latest
     container:
-      image: ${{ matrix.arch.image }}
+      image: archlinux:latest
     steps:
       - name: Install dependencies
         run: |
-          # Disable Landlock sandbox (doesn't work in containers)
-          sed -i 's/#DisableSandbox/DisableSandbox/' /etc/pacman.conf
           pacman -Syu --noconfirm
           pacman -S --noconfirm base-devel sudo polkit
 
@@ -158,7 +145,7 @@ jobs:
       - name: Download tarball
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.arch.tarball }}
+          name: tarball-x64
 
       - name: Generate PKGBUILD
         run: ./scripts/generate-pkgbuild.sh 0.0.0 --local-source "$PWD" > PKGBUILD
@@ -175,3 +162,40 @@ jobs:
 
       - name: Verify installation
         run: /usr/local/bin/sudo-mcp --help
+
+  test-pkgbuild-arm64:
+    name: Test PKGBUILD (arm64)
+    needs: build-tarballs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: tarball-arm64
+
+      - name: Build and test in ARM64 Arch
+        uses: uraimo/run-on-arch-action@v3
+        with:
+          arch: aarch64
+          distro: archarm_latest
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            --volume "${{ github.workspace }}:/workspace"
+          run: |
+            cd /workspace
+            # Disable Landlock sandbox (doesn't work in containers/QEMU)
+            sed -i 's/#DisableSandbox/DisableSandbox/' /etc/pacman.conf || true
+            echo "DisableSandbox" >> /etc/pacman.conf
+            pacman-key --init
+            pacman-key --populate archlinuxarm
+            pacman -Syu --noconfirm
+            pacman -S --noconfirm base-devel sudo polkit
+            ./scripts/generate-pkgbuild.sh 0.0.0 --local-source "$PWD" > PKGBUILD
+            useradd -m builder
+            echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+            chown -R builder:builder .
+            sudo -u builder makepkg -si --noconfirm
+            /usr/local/bin/sudo-mcp --help
