@@ -81,22 +81,22 @@ jobs:
             /p:PublishSingleFile=true
 
       - name: Create x64 tarball
-        run: ./scripts/create-tarball.sh --arch x64 --version 0.0.0-ci --binary ./publish/x64/SudoMcp
+        run: ./scripts/create-tarball.sh --arch x64 --version 0.0.0 --binary ./publish/x64/SudoMcp
 
       - name: Create arm64 tarball
-        run: ./scripts/create-tarball.sh --arch arm64 --version 0.0.0-ci --binary ./publish/arm64/SudoMcp
+        run: ./scripts/create-tarball.sh --arch arm64 --version 0.0.0 --binary ./publish/arm64/SudoMcp
 
       - name: Upload x64 tarball
         uses: actions/upload-artifact@v4
         with:
           name: tarball-x64
-          path: sudo-mcp-x64-v0.0.0-ci.tar.gz
+          path: sudo-mcp-x64-v0.0.0.tar.gz
 
       - name: Upload arm64 tarball
         uses: actions/upload-artifact@v4
         with:
           name: tarball-arm64
-          path: sudo-mcp-arm64-v0.0.0-ci.tar.gz
+          path: sudo-mcp-arm64-v0.0.0.tar.gz
 
   test-install:
     name: Test Install (${{ matrix.arch.name }})
@@ -110,6 +110,11 @@ jobs:
           - name: arm64
             runner: ubuntu-24.04-arm
     steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y policykit-1
+
       - name: Download tarball
         uses: actions/download-artifact@v4
         with:
@@ -117,8 +122,8 @@ jobs:
 
       - name: Test install script
         run: |
-          tar -xzf "sudo-mcp-${{ matrix.arch.name }}-v0.0.0-ci.tar.gz"
-          cd "sudo-mcp-${{ matrix.arch.name }}-v0.0.0-ci"
+          tar -xzf "sudo-mcp-${{ matrix.arch.name }}-v0.0.0.tar.gz"
+          cd "sudo-mcp-${{ matrix.arch.name }}-v0.0.0"
           ./install.sh
           /usr/local/bin/sudo-mcp --help
 
@@ -143,7 +148,7 @@ jobs:
           name: tarball-x64
 
       - name: Generate PKGBUILD
-        run: ./scripts/generate-pkgbuild.sh 0.0.0-ci --local-source "$PWD" > PKGBUILD
+        run: ./scripts/generate-pkgbuild.sh 0.0.0 --local-source "$PWD" > PKGBUILD
 
       - name: Create builder user
         run: |
