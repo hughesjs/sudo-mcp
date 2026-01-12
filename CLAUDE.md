@@ -206,7 +206,7 @@ dotnet publish src/SudoMcp/SudoMcp.csproj \
     --self-contained \
     -o ./publish \
     /p:PublishSingleFile=true
-sudo cp publish/SudoMcp /usr/local/bin/sudo-mcp
+sudo cp publish/SudoMcp /usr/bin/sudo-mcp
 ```
 
 ### Testing Integration
@@ -216,7 +216,7 @@ Add to Claude Desktop/Code config:
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp"
+      "command": "/usr/bin/sudo-mcp"
     }
   }
 }

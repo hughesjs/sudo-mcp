@@ -125,7 +125,7 @@ jobs:
           tar -xzf "sudo-mcp-${{ matrix.arch.name }}-v0.0.0.tar.gz"
           cd "sudo-mcp-${{ matrix.arch.name }}-v0.0.0"
           ./install.sh
-          /usr/local/bin/sudo-mcp --help
+          /usr/bin/sudo-mcp --help
 
   test-pkgbuild-x64:
     name: Test PKGBUILD (x64)
@@ -164,7 +164,7 @@ jobs:
           sudo -u builder makepkg -si --noconfirm
 
       - name: Verify installation
-        run: /usr/local/bin/sudo-mcp --help
+        run: /usr/bin/sudo-mcp --help
 
   test-pkgbuild-arm64:
     name: Test PKGBUILD (arm64)
@@ -201,4 +201,4 @@ jobs:
             echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
             chown -R builder:builder .
             sudo -u builder makepkg -si --noconfirm
-            /usr/local/bin/sudo-mcp --help
+            /usr/bin/sudo-mcp --help

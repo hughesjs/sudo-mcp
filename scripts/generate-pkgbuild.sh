@@ -73,7 +73,7 @@ package() {
     esac
 
     # Install binary
-    install -Dm755 sudo-mcp "\$pkgdir/usr/local/bin/sudo-mcp"
+    install -Dm755 sudo-mcp "\$pkgdir/usr/bin/sudo-mcp"
 
     # Install documentation
     install -Dm644 README.md "\$pkgdir/usr/share/doc/\$pkgname/README.md"

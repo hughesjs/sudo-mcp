@@ -3,7 +3,7 @@ set -euo pipefail
 
 # sudo-mcp uninstallation script
 
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="/usr/bin"
 CONFIG_DIR="/etc/sudo-mcp"
 LOG_DIR="/var/log/sudo-mcp"
 

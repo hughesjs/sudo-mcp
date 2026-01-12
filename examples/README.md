@@ -80,7 +80,7 @@ Use the default `sudo-mcp` configuration with the standard blocklist:
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp"
+      "command": "/usr/bin/sudo-mcp"
     }
   }
 }
@@ -93,7 +93,7 @@ Use `sudo-mcp-custom` with a relaxed blocklist and longer timeout:
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp",
+      "command": "/usr/bin/sudo-mcp",
       "args": [
         "--blocklist-file",
         "/path/to/permissive-blocklist.json",
@@ -112,7 +112,7 @@ Use `sudo-mcp-no-blocklist` **ONLY** in isolated test environments:
 {
   "mcpServers": {
     "sudo-mcp": {
-      "command": "/usr/local/bin/sudo-mcp",
+      "command": "/usr/bin/sudo-mcp",
       "args": ["--no-blocklist"]
     }
   }
