@@ -201,6 +201,20 @@ sudo-mcp includes an embedded default blocklist that prevents execution of dange
 }
 ```
 
+**Example blocklist files** are provided in the `examples/` directory:
+
+- **`blocklist-default.json`** - Exact copy of embedded default (reference implementation)
+- **`blocklist-permissive.json`** - Relaxed rules for development environments
+- **`blocklist-strict.json`** - Enhanced security for production-adjacent environments
+- **`blocklist-minimal.json`** - Bare minimum for testing in disposable VMs
+
+See [`examples/blocklist-README.md`](examples/blocklist-README.md) for detailed documentation.
+
+**Using an example blocklist:**
+```bash
+sudo-mcp --blocklist-file examples/blocklist-permissive.json
+```
+
 **Customising the blocklist:**
 
 Create your own JSON file and pass it via `--blocklist-file`:
