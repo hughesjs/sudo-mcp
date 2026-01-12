@@ -1,0 +1,12 @@
+{
+  "BlockedCommands": {
+    "ExactMatches": [
+      "rm -rf /",
+      ":(){:|:&};:"
+    ],
+    "RegexPatterns": [
+      "^rm\\s+(-rf?|-fr|--recursive)\\s+/\\s*$"
+    ],
+    "BlockedBinaries": []
+  }
+}
