@@ -202,3 +202,70 @@ jobs:
             chown -R builder:builder .
             sudo -u builder makepkg -si --noconfirm
             /usr/bin/sudo-mcp --help
+
+  test-specfile-x64:
+    name: Test Specfile (x64)
+    needs: build-tarballs
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    steps:
+      - name: Install dependencies
+        run: dnf install -y rpm-build rpmdevtools polkit sudo git
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: tarball-x64
+
+      - name: Setup rpmbuild directories
+        run: rpmdev-setuptree
+
+      - name: Generate specfile
+        run: ./scripts/generate-specfile.sh 0.0.0 --local-source "$PWD" > ~/rpmbuild/SPECS/sudo-mcp.spec
+
+      - name: Copy source tarball
+        run: cp sudo-mcp-x64-v0.0.0.tar.gz ~/rpmbuild/SOURCES/
+
+      - name: Build RPM
+        run: rpmbuild -bb ~/rpmbuild/SPECS/sudo-mcp.spec
+
+      - name: Install RPM
+        run: dnf install -y ~/rpmbuild/RPMS/x86_64/sudo-mcp-*.rpm
+
+      - name: Verify installation
+        run: /usr/bin/sudo-mcp --help
+
+  test-specfile-arm64:
+    name: Test Specfile (arm64)
+    needs: build-tarballs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: tarball-arm64
+
+      - name: Build and test in ARM64 Fedora
+        uses: uraimo/run-on-arch-action@v3
+        with:
+          arch: aarch64
+          distro: fedora_latest
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            --volume "${{ github.workspace }}:/workspace"
+          run: |
+            cd /workspace
+            dnf install -y rpm-build rpmdevtools polkit sudo
+            rpmdev-setuptree
+            ./scripts/generate-specfile.sh 0.0.0 --local-source "$PWD" > ~/rpmbuild/SPECS/sudo-mcp.spec
+            cp sudo-mcp-arm64-v0.0.0.tar.gz ~/rpmbuild/SOURCES/
+            rpmbuild -bb ~/rpmbuild/SPECS/sudo-mcp.spec
+            dnf install -y ~/rpmbuild/RPMS/aarch64/sudo-mcp-*.rpm
+            /usr/bin/sudo-mcp --help

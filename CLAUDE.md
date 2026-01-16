@@ -276,13 +276,17 @@ The project uses GitHub Actions for automated releases on every push to `master`
 2. **Multi-Architecture Build**: Parallel builds for x64 and ARM64
 3. **Tarball Creation**: Complete packages with binaries, config, scripts, docs
 4. **PKGBUILD Generation**: Arch Linux package build file
-5. **Git Tag**: Version tag created (e.g., `v0.1.0`)
-6. **GitHub Release**: Automatic release with changelog and artifacts
+5. **Specfile Generation**: Fedora/COPR RPM spec file
+6. **Git Tag**: Version tag created (e.g., `v0.1.0`)
+7. **GitHub Release**: Automatic release with changelog and artifacts
+8. **AUR Publishing**: Automatic push to Arch User Repository
+9. **COPR Publishing**: Automatic submission to Fedora COPR
 
 **Release Artifacts**:
 - `sudo-mcp-x64-v{version}.tar.gz` - x86_64 complete package
 - `sudo-mcp-arm64-v{version}.tar.gz` - ARM64 complete package
 - `PKGBUILD` - Arch Linux package file
+- `sudo-mcp.spec` - Fedora/COPR RPM spec file
 
 ### Commit Message Guidelines
 
@@ -332,6 +336,13 @@ curl -LO https://github.com/hughesjs/sudo-mcp/releases/latest/download/PKGBUILD
 makepkg -si
 ```
 
+**Test COPR** (on Fedora/RHEL/CentOS):
+```bash
+sudo dnf copr enable hughesjs/sudo-mcp
+sudo dnf install sudo-mcp
+sudo-mcp --help
+```
+
 ### Versioning Strategy
 
 **Current version**: `0.1.0` (early development, not production-ready)
@@ -341,6 +352,19 @@ makepkg -si
 - `1.0.0` - First stable production release (when ready)
 - `1.x.x` - Stable releases with backward compatibility
 - `2.0.0+` - Major releases with breaking changes
+
+### Required GitHub Secrets
+
+For automated package publishing, configure these secrets in GitHub repository settings:
+
+**AUR Publishing**:
+- `AUR_USERNAME` - AUR account username
+- `AUR_EMAIL` - Email associated with AUR account
+- `AUR_SSH_PRIVATE_KEY` - SSH private key for AUR git access
+
+**COPR Publishing**:
+- `COPR_CONFIG` - Full content from https://copr.fedoraproject.org/api/ (contains login + token)
+- The COPR project is automatically created by the workflow if it doesn't exist
 
 ### CI for Pull Requests
 
