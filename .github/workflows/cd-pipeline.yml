@@ -464,8 +464,6 @@ jobs:
             --chroot epel-9-aarch64 \
             --description "MCP server for privileged command execution via sudo/pkexec" \
             --instructions "sudo dnf copr enable hughesjs/sudo-mcp && sudo dnf install sudo-mcp" \
-            --homepage "https://github.com/hughesjs/sudo-mcp" \
-            --license "MIT" \
             || echo "Project may already exist, continuing..."
 
       - name: Download specfile
