@@ -71,6 +71,7 @@ ${SOURCE_SECTION}
 BuildArch:      x86_64 aarch64
 Requires:       polkit
 Requires:       sudo
+Requires:       libicu
 
 # Don't strip .NET single-file binaries - they are self-contained and stripping breaks them
 %global __os_install_post %{nil}
