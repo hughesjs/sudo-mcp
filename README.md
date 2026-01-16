@@ -5,6 +5,7 @@
 [![AUR Version](https://img.shields.io/aur/version/sudo-mcp?style=for-the-badge&logo=arch-linux&color=1793d1)](https://aur.archlinux.org/packages/sudo-mcp)
 [![AUR Votes](https://img.shields.io/aur/votes/sudo-mcp?style=for-the-badge&logo=arch-linux)](https://aur.archlinux.org/packages/sudo-mcp)
 [![AUR Popularity](https://img.shields.io/aur/popularity/sudo-mcp?style=for-the-badge&logo=arch-linux)](https://aur.archlinux.org/packages/sudo-mcp)
+[![COPR](https://img.shields.io/badge/COPR-hughesjs%2Fsudo--mcp-51A2DA?style=for-the-badge&logo=fedora)](https://copr.fedoraproject.org/coprs/hughesjs/sudo-mcp/)
 [![License](https://img.shields.io/github/license/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/blob/master/LICENSE)
 [![Made in Scotland](https://raw.githubusercontent.com/hughesjs/custom-badges/master/made-in/made-in-scotland.svg)](https://github.com/hughesjs/custom-badges)
 
@@ -45,6 +46,13 @@ sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP clie
 **Arch Linux:**
 ```bash
 yay -S sudo-mcp                            # Install from AUR
+claude mcp add sudo-mcp /usr/bin/sudo-mcp  # Configure Claude Code
+```
+
+**Fedora/RHEL/CentOS:**
+```bash
+sudo dnf copr enable hughesjs/sudo-mcp     # Enable COPR repository
+sudo dnf install sudo-mcp                  # Install from COPR
 claude mcp add sudo-mcp /usr/bin/sudo-mcp  # Configure Claude Code
 ```
 
@@ -98,6 +106,25 @@ If you prefer to build manually, visit the [Releases Page](https://github.com/hu
 ```bash
 makepkg -si
 ```
+
+### Fedora/RHEL/CentOS (COPR)
+
+**From COPR** (Recommended):
+```bash
+# Enable the COPR repository
+sudo dnf copr enable hughesjs/sudo-mcp
+
+# Install sudo-mcp
+sudo dnf install sudo-mcp
+```
+
+**Supported distributions**:
+- Fedora 40, 41, 42, Rawhide (x86_64, aarch64)
+- EPEL 9 (x86_64, aarch64)
+
+**Manual specfile**:
+
+If you prefer to build manually, visit the [Releases Page](https://github.com/hughesjs/sudo-mcp/releases/latest), download the `sudo-mcp.spec` file, and use `rpmbuild` or `mock`.
 
 ### From Source (Development)
 
@@ -456,6 +483,7 @@ ps aux | grep polkit
 # Install polkit-gnome (GNOME) or polkit-kde (KDE)
 sudo pacman -S polkit-gnome  # Arch Linux
 sudo apt install policykit-1-gnome  # Debian/Ubuntu
+sudo dnf install polkit-gnome  # Fedora/RHEL
 ```
 
 ### Audit log not created
