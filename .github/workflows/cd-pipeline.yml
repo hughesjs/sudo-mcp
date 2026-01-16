@@ -33,8 +33,9 @@ jobs:
           branch: master
           majorList: major, breaking
           minorList: minor, feat, feature
-          patchList: fix, bugfix, perf, refactor, test, tests, chore, patch
+          patchList: fix, bugfix, perf, refactor, test, tests, chore, patch, build, ci, docs, style
           patchAll: true
+          noVersionBumpBehavior: patch
 
   build-binaries:
     name: Build ${{ matrix.arch.name }} Binary
@@ -454,12 +455,10 @@ jobs:
           copr-cli create sudo-mcp \
             --chroot fedora-rawhide-x86_64 \
             --chroot fedora-rawhide-aarch64 \
+            --chroot fedora-43-x86_64 \
+            --chroot fedora-43-aarch64 \
             --chroot fedora-42-x86_64 \
             --chroot fedora-42-aarch64 \
-            --chroot fedora-41-x86_64 \
-            --chroot fedora-41-aarch64 \
-            --chroot fedora-40-x86_64 \
-            --chroot fedora-40-aarch64 \
             --chroot epel-9-x86_64 \
             --chroot epel-9-aarch64 \
             --description "MCP server for privileged command execution via sudo/pkexec" \
@@ -476,11 +475,9 @@ jobs:
           copr-cli build hughesjs/sudo-mcp ./sudo-mcp.spec \
             --chroot fedora-rawhide-x86_64 \
             --chroot fedora-rawhide-aarch64 \
+            --chroot fedora-43-x86_64 \
+            --chroot fedora-43-aarch64 \
             --chroot fedora-42-x86_64 \
             --chroot fedora-42-aarch64 \
-            --chroot fedora-41-x86_64 \
-            --chroot fedora-41-aarch64 \
-            --chroot fedora-40-x86_64 \
-            --chroot fedora-40-aarch64 \
             --chroot epel-9-x86_64 \
             --chroot epel-9-aarch64
