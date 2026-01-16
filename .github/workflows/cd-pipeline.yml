@@ -149,6 +149,26 @@ jobs:
           # Create tarball
           tar -czf "sudo-mcp-arm64-v${VERSION}.tar.gz" "${TARBALL_DIR}"
 
+      - name: Create combined tarball for COPR
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          TARBALL_DIR="sudo-mcp-${VERSION}"
+          mkdir -p "${TARBALL_DIR}"
+
+          # Copy both binaries with arch suffix
+          cp ./artifacts/x64/SudoMcp "${TARBALL_DIR}/sudo-mcp-x64"
+          cp ./artifacts/arm64/SudoMcp "${TARBALL_DIR}/sudo-mcp-arm64"
+          chmod +x "${TARBALL_DIR}/sudo-mcp-x64"
+          chmod +x "${TARBALL_DIR}/sudo-mcp-arm64"
+
+          # Copy documentation
+          cp README.md "${TARBALL_DIR}/"
+          cp SECURITY.md "${TARBALL_DIR}/"
+          cp LICENSE "${TARBALL_DIR}/"
+
+          # Create tarball
+          tar -czf "sudo-mcp-${VERSION}.tar.gz" "${TARBALL_DIR}"
+
       - name: Upload x64 tarball
         uses: actions/upload-artifact@v4
         with:
@@ -161,6 +181,13 @@ jobs:
         with:
           name: sudo-mcp-arm64-tarball
           path: sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
+          if-no-files-found: error
+
+      - name: Upload combined tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudo-mcp-combined-tarball
+          path: sudo-mcp-${{ needs.version.outputs.version }}.tar.gz
           if-no-files-found: error
 
   prepare-aur-package:
@@ -286,31 +313,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download x64 tarball
+      - name: Download combined tarball
         uses: actions/download-artifact@v4
         with:
-          name: sudo-mcp-x64-tarball
-
-      - name: Download arm64 tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: sudo-mcp-arm64-tarball
-
-      - name: Compute SHA256 checksums
-        id: checksums
-        run: |
-          SHA256_X64=$(sha256sum sudo-mcp-x64-v${{ needs.version.outputs.version }}.tar.gz | cut -d' ' -f1)
-          SHA256_ARM64=$(sha256sum sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz | cut -d' ' -f1)
-          echo "sha256_x64=${SHA256_X64}" >> "$GITHUB_OUTPUT"
-          echo "sha256_arm64=${SHA256_ARM64}" >> "$GITHUB_OUTPUT"
+          name: sudo-mcp-combined-tarball
 
       - name: Generate .spec file
         run: |
-          ./scripts/generate-specfile.sh \
-            "${{ needs.version.outputs.version }}" \
-            --sha256-x64 "${{ steps.checksums.outputs.sha256_x64 }}" \
-            --sha256-arm64 "${{ steps.checksums.outputs.sha256_arm64 }}" \
-            > sudo-mcp.spec
+          ./scripts/generate-specfile.sh "${{ needs.version.outputs.version }}" > sudo-mcp.spec
 
       - name: Upload specfile
         uses: actions/upload-artifact@v4
@@ -333,6 +343,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sudo-mcp-arm64-tarball
+
+      - name: Download combined tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-combined-tarball
 
       - name: Download PKGBUILD
         uses: actions/download-artifact@v4
@@ -405,6 +420,7 @@ jobs:
           artifacts: |
             sudo-mcp-x64-v${{ needs.version.outputs.version }}.tar.gz
             sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
+            sudo-mcp-${{ needs.version.outputs.version }}.tar.gz
             PKGBUILD
             sudo-mcp.spec
           draft: false
