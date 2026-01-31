@@ -86,6 +86,26 @@ jobs:
       - name: Create arm64 tarball
         run: ./scripts/create-tarball.sh --arch arm64 --version 0.0.0 --binary ./publish/arm64/SudoMcp
 
+      - name: Create combined tarball for specfile testing
+        run: |
+          VERSION="0.0.0"
+          TARBALL_DIR="sudo-mcp-${VERSION}"
+          mkdir -p "${TARBALL_DIR}"
+
+          # Copy both binaries with arch suffix (as specfile expects)
+          cp ./publish/x64/SudoMcp "${TARBALL_DIR}/sudo-mcp-x64"
+          cp ./publish/arm64/SudoMcp "${TARBALL_DIR}/sudo-mcp-arm64"
+          chmod +x "${TARBALL_DIR}/sudo-mcp-x64"
+          chmod +x "${TARBALL_DIR}/sudo-mcp-arm64"
+
+          # Copy documentation
+          cp README.md "${TARBALL_DIR}/"
+          cp SECURITY.md "${TARBALL_DIR}/"
+          cp LICENSE "${TARBALL_DIR}/"
+
+          # Create tarball
+          tar -czf "sudo-mcp-${VERSION}.tar.gz" "${TARBALL_DIR}"
+
       - name: Upload x64 tarball
         uses: actions/upload-artifact@v4
         with:
@@ -97,6 +117,12 @@ jobs:
         with:
           name: tarball-arm64
           path: sudo-mcp-arm64-v0.0.0.tar.gz
+
+      - name: Upload combined tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarball-combined
+          path: sudo-mcp-0.0.0.tar.gz
 
   test-install:
     name: Test Install (${{ matrix.arch.name }})
@@ -216,10 +242,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download tarball
+      - name: Download combined tarball
         uses: actions/download-artifact@v4
         with:
-          name: tarball-x64
+          name: tarball-combined
 
       - name: Setup rpmbuild directories
         run: rpmdev-setuptree
@@ -228,7 +254,7 @@ jobs:
         run: ./scripts/generate-specfile.sh 0.0.0 --local-source "$PWD" > ~/rpmbuild/SPECS/sudo-mcp.spec
 
       - name: Copy source tarball
-        run: cp sudo-mcp-x64-v0.0.0.tar.gz ~/rpmbuild/SOURCES/
+        run: cp sudo-mcp-0.0.0.tar.gz ~/rpmbuild/SOURCES/
 
       - name: Build RPM
         run: rpmbuild -bb ~/rpmbuild/SPECS/sudo-mcp.spec
@@ -247,10 +273,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download tarball
+      - name: Download combined tarball
         uses: actions/download-artifact@v4
         with:
-          name: tarball-arm64
+          name: tarball-combined
 
       - name: Build and test in ARM64 Fedora
         uses: uraimo/run-on-arch-action@v3
@@ -265,7 +291,7 @@ jobs:
             dnf install -y rpm-build rpmdevtools polkit sudo
             rpmdev-setuptree
             ./scripts/generate-specfile.sh 0.0.0 --local-source "$PWD" > ~/rpmbuild/SPECS/sudo-mcp.spec
-            cp sudo-mcp-arm64-v0.0.0.tar.gz ~/rpmbuild/SOURCES/
+            cp sudo-mcp-0.0.0.tar.gz ~/rpmbuild/SOURCES/
             rpmbuild -bb ~/rpmbuild/SPECS/sudo-mcp.spec
             dnf install -y ~/rpmbuild/RPMS/aarch64/sudo-mcp-*.rpm
             /usr/bin/sudo-mcp --help
