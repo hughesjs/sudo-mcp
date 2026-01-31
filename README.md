@@ -29,6 +29,8 @@ MCP (Model Context Protocol) server that allows AI models to execute commands wi
 > **The `--no-blocklist` flag removes ALL command validation. Using this option gives the AI unrestricted root access to your system.**
 > 
 > **You have been warned.**
+>
+> Despite this, this tool is still safer than OpenClaw, at least you're asked for your password to do dumb stuff.
 
 ## Overview
 
