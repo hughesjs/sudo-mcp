@@ -451,12 +451,6 @@ jobs:
 
             ## Installation
 
-            ### macOS (Homebrew)
-
-            ```bash
-            brew install hughesjs/tap/sudo-mcp
-            ```
-
             ### macOS (Binary Release)
 
             **Apple Silicon (M1/M2/M3/M4)**:
@@ -606,65 +600,3 @@ jobs:
             --chroot epel-9-x86_64 \
             --chroot epel-9-aarch64
 
-  prepare-homebrew-formula:
-    name: Prepare Homebrew Formula
-    runs-on: ubuntu-latest
-    needs: [version, create-tarballs]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download macOS x64 tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: sudo-mcp-macos-x64-tarball
-
-      - name: Download macOS ARM64 tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: sudo-mcp-macos-arm64-tarball
-
-      - name: Compute SHA256 checksums
-        id: checksums
-        run: |
-          SHA256_X64=$(sha256sum sudo-mcp-macos-x64-v${{ needs.version.outputs.version }}.tar.gz | cut -d' ' -f1)
-          SHA256_ARM64=$(sha256sum sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}.tar.gz | cut -d' ' -f1)
-          echo "sha256_x64=${SHA256_X64}" >> "$GITHUB_OUTPUT"
-          echo "sha256_arm64=${SHA256_ARM64}" >> "$GITHUB_OUTPUT"
-
-      - name: Generate Homebrew formula
-        run: |
-          ./scripts/generate-homebrew-formula.sh \
-            "${{ needs.version.outputs.version }}" \
-            --sha256-x64 "${{ steps.checksums.outputs.sha256_x64 }}" \
-            --sha256-arm64 "${{ steps.checksums.outputs.sha256_arm64 }}" \
-            > sudo-mcp.rb
-
-      - name: Upload formula
-        uses: actions/upload-artifact@v4
-        with:
-          name: homebrew-formula
-          path: sudo-mcp.rb
-          if-no-files-found: error
-
-  publish-homebrew:
-    name: Publish to Homebrew Tap
-    runs-on: ubuntu-latest
-    needs: [version, create-release, prepare-homebrew-formula]
-    steps:
-      - name: Download formula
-        uses: actions/download-artifact@v4
-        with:
-          name: homebrew-formula
-
-      - name: Push to tap repository
-        uses: dmnemec/copy_file_to_another_repo_action@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        with:
-          source_file: sudo-mcp.rb
-          destination_repo: hughesjs/homebrew-tap
-          destination_folder: Formula
-          user_email: actions@github.com
-          user_name: GitHub Actions
-          commit_message: "Update sudo-mcp to v${{ needs.version.outputs.version }}"

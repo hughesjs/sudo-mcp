@@ -46,9 +46,8 @@ sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP clie
 
 ## Quick Start (Claude Code)
 
-**macOS (Homebrew):**
+**macOS:** Download from [releases](https://github.com/hughesjs/sudo-mcp/releases/latest), extract, run `./install.sh`, then:
 ```bash
-brew install hughesjs/tap/sudo-mcp                        # Install from Homebrew
 claude mcp add sudo-mcp /usr/local/bin/sudo-mcp           # Configure Claude Code
 ```
 
@@ -78,12 +77,6 @@ Restart Claude Code and approve authentication prompts when commands execute. **
 - **Claude Desktop** - Or any MCP-compatible client
 
 ## Installation
-
-### macOS (Homebrew)
-
-```bash
-brew install hughesjs/tap/sudo-mcp
-```
 
 ### Binary Release (Linux and macOS)
 

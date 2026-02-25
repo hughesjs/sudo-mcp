@@ -310,7 +310,6 @@ The project uses GitHub Actions for automated releases on every push to `master`
 - `sudo-mcp-macos-arm64-v{version}.tar.gz` - macOS Apple Silicon complete package
 - `PKGBUILD` - Arch Linux package file
 - `sudo-mcp.spec` - Fedora/COPR RPM spec file
-- Homebrew formula published to `hughesjs/homebrew-tap`
 
 ### Commit Message Guidelines
 
@@ -389,9 +388,6 @@ For automated package publishing, configure these secrets in GitHub repository s
 **COPR Publishing**:
 - `COPR_CONFIG` - Full content from https://copr.fedoraproject.org/api/ (contains login + token)
 - The COPR project is automatically created by the workflow if it doesn't exist
-
-**Homebrew Tap Publishing**:
-- `HOMEBREW_TAP_TOKEN` - GitHub PAT with `repo` scope for the `hughesjs/homebrew-tap` repository
 
 ### CI for Pull Requests
 
