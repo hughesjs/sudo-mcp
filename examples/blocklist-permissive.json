@@ -6,7 +6,7 @@
     ],
     "RegexPatterns": [
       "^rm\\s+(-rf?|-fr|--recursive)\\s+/\\s*$",
-      "^dd\\s+if=.+\\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]).*$",
+      "^dd\\s+if=.+\\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]|disk[0-9]).*$",
       "^>(\\s*)?/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]).*$"
     ],
     "BlockedBinaries": [
