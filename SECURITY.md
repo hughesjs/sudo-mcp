@@ -59,6 +59,20 @@ Only use this in disposable environments where you don't care what happens.
 
 ---
 
+## macOS Security Notes
+
+On macOS, sudo-mcp uses `sudo -A` with an osascript-based askpass helper to prompt for authentication via a native macOS password dialogue. This is the macOS analogue of polkit's graphical auth dialogue on Linux.
+
+**Key differences from Linux:**
+
+- **Credential caching**: macOS `sudo` caches credentials for a configurable timeout period (default 5 minutes). During this window, subsequent commands execute without prompting. This means the user may only see one password dialogue per session.
+- **No polkit**: macOS has no polkit/pkexec. Privilege escalation is handled entirely through `sudo`.
+- **SIP protection**: macOS System Integrity Protection prevents modification of `/usr/bin/` and other protected paths. The binary installs to `/usr/local/bin/` instead.
+- **Askpass script**: A temporary shell script is created at runtime that invokes `osascript` to display the password dialogue. The script is stored in a temp directory with user-only permissions (0700) and persists for the process lifetime.
+- **Graphical session required**: The osascript dialogue requires a graphical session. Running sudo-mcp via SSH or in a headless environment will fail to display the prompt.
+
+---
+
 ## No Security Support
 
 This tool is intentionally dangerous by design. If you find a blocklist bypass, that's expected. There is no security contact because there is no expectation of security.

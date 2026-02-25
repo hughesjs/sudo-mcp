@@ -31,12 +31,12 @@ public static partial class DefaultBlocklist
             RmRfRoot(),
             RmRfRootGlob(),
 
-            // Direct disk writes
+            // Direct disk writes (Linux + macOS)
             DdToDisk(),
             DdZeroToDisk(),
             RedirectToDisk(),
 
-            // Filesystem creation
+            // Filesystem creation (Linux)
             MkfsAny(),
 
             // Recursive permission changes on root
@@ -48,19 +48,25 @@ public static partial class DefaultBlocklist
             // Pipe to shell (command injection)
             CurlWgetPipeToShell(),
 
-            // Disk partitioning
+            // Disk partitioning (Linux)
             Fdisk(),
             Parted(),
 
-            // Disk wiping
+            // Disk wiping (Linux)
             Wipefs(),
 
             // Moving files to /dev/null
-            MvToDevNull()
+            MvToDevNull(),
+
+            // macOS disk utilities
+            DiskutilDestructive(),
+            DiskutilApfsDestructive(),
+            NewfsAny()
         ],
 
         BlockedBinaries =
         [
+            // Linux filesystem creation
             "mkfs.ext2",
             "mkfs.ext3",
             "mkfs.ext4",
@@ -73,7 +79,13 @@ public static partial class DefaultBlocklist
             "cryptsetup",
             "wipefs",
             "sgdisk",
-            "gdisk"
+            "gdisk",
+            // macOS filesystem creation
+            "newfs_hfs",
+            "newfs_apfs",
+            "newfs_exfat",
+            "newfs_msdos",
+            "newfs_udf"
         ]
     };
 
@@ -84,11 +96,11 @@ public static partial class DefaultBlocklist
     [GeneratedRegex(@"^rm\s+(-rf?|-fr|--recursive)\s+/\*\s*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex RmRfRootGlob();
 
-    // Direct disk writes
-    [GeneratedRegex(@"^dd\s+if=.+\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]).*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    // Direct disk writes (Linux + macOS)
+    [GeneratedRegex(@"^dd\s+if=.+\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]|disk[0-9]).*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex DdToDisk();
 
-    [GeneratedRegex(@"^dd\s+if=/dev/zero\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]).*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^dd\s+if=/dev/zero\s+of=/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|disk[0-9]).*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex DdZeroToDisk();
 
     [GeneratedRegex(@"^>(\s*)?/dev/(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z]|hd[a-z]).*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
@@ -124,4 +136,15 @@ public static partial class DefaultBlocklist
     // Moving files to /dev/null
     [GeneratedRegex(@"^mv\s+.*\s+/dev/null\s*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex MvToDevNull();
+
+    // macOS disk utilities - destructive diskutil subcommands
+    [GeneratedRegex(@"^diskutil\s+(eraseDisk|partitionDisk|secureErase|zeroDisk)\s+.*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex DiskutilDestructive();
+
+    [GeneratedRegex(@"^diskutil\s+apfs\s+(deleteContainer|deleteVolume)\s+.*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex DiskutilApfsDestructive();
+
+    // macOS filesystem creation
+    [GeneratedRegex(@"^newfs(_hfs|_apfs|_exfat|_msdos|_udf)?\s+.*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex NewfsAny();
 }

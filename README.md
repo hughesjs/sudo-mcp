@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/github/license/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/blob/master/LICENSE)
 [![Made in Scotland](https://raw.githubusercontent.com/hughesjs/custom-badges/master/made-in/made-in-scotland.svg)](https://github.com/hughesjs/custom-badges)
 
-MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo and pkexec. When you attempt to run an elevated command your configured polkit agent will interactively prompt for your password.
+MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo. On Linux, privilege escalation uses polkit/pkexec with your desktop authentication agent. On macOS, it uses `sudo -A` with a native password dialogue via osascript.
 
 > [!CAUTION]
 > ## <img src="https://i.gifer.com/ULMC.gif" width="20"> SECURITY WARNING <img src="https://i.gifer.com/ULMC.gif" width="20">
@@ -34,16 +34,23 @@ MCP (Model Context Protocol) server that allows AI models to execute commands wi
 
 ## Overview
 
-sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP client) to enable execution of privileged commands. It uses polkit/pkexec for authentication and supports configurable command validation.
+sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP client) to enable execution of privileged commands. On Linux it uses polkit/pkexec for authentication; on macOS it uses `sudo -A` with a native osascript password dialogue. Both platforms support configurable command validation.
 
 **Key Features:**
-- 🔐 **Polkit Integration** - Uses pkexec for secure privilege escalation with user authentication
-- ✅ **Configurable Command Validation** - Optional blocklist to prevent dangerous operations
+- 🔐 **Platform-Native Privilege Escalation** - polkit/pkexec on Linux, sudo with native macOS password dialogue
+- ✅ **Configurable Command Validation** - Optional blocklist to prevent dangerous operations (Linux and macOS patterns)
 - 📝 **Comprehensive Audit Logging** - Every command attempt logged with full details
 - ⚙️ **Runtime Configuration** - Command-line arguments for blocklist, timeouts, and logging
 - 🚀 **.NET 10** - Built on the latest .NET platform with C# 12
+- 🍎 **Cross-Platform** - Supports Linux (x64/ARM64) and macOS (Intel/Apple Silicon)
 
 ## Quick Start (Claude Code)
+
+**macOS (Homebrew):**
+```bash
+brew install hughesjs/tap/sudo-mcp                        # Install from Homebrew
+claude mcp add sudo-mcp /usr/local/bin/sudo-mcp           # Configure Claude Code
+```
 
 **Arch Linux:**
 ```bash
@@ -58,20 +65,27 @@ sudo dnf install sudo-mcp                  # Install from COPR
 claude mcp add sudo-mcp /usr/bin/sudo-mcp  # Configure Claude Code
 ```
 
-**Other Linux distributions:** Download from [releases](https://github.com/hughesjs/sudo-mcp/releases/latest), extract, run `./install.sh`, then use `claude mcp add`.
+**Other distributions:** Download from [releases](https://github.com/hughesjs/sudo-mcp/releases/latest), extract, run `./install.sh`, then use `claude mcp add`.
 
-Restart Claude Code and approve polkit authentication prompts when commands execute. **Read the [security warning](#%EF%B8%8F-security-warning) above before use.**
+Restart Claude Code and approve authentication prompts when commands execute. **Read the [security warning](#%EF%B8%8F-security-warning) above before use.**
 
 ## Prerequisites
 
 - **(If Building) .NET 10 SDK** - Install from [dotnet.microsoft.com](https://dotnet.microsoft.com/)
-- **Linux** - This tool requires polkit/pkexec (Linux-only)
-- **Polkit authentication agent** - Required for graphical authentication (typically included in desktop environments)
+- **Linux or macOS** - Supported platforms
+- **Linux**: Polkit authentication agent - Required for graphical authentication (typically included in desktop environments)
+- **macOS**: `sudo` (included by default) - Uses native osascript password dialogue for authentication
 - **Claude Desktop** - Or any MCP-compatible client
 
 ## Installation
 
-### Binary Release (Recommended)
+### macOS (Homebrew)
+
+```bash
+brew install hughesjs/tap/sudo-mcp
+```
+
+### Binary Release (Linux and macOS)
 
 **Step 1**: Visit the [Releases Page](https://github.com/hughesjs/sudo-mcp/releases/latest) to download the latest version for your architecture.
 
@@ -184,7 +198,7 @@ sudo-mcp supports the following command-line arguments for runtime configuration
 |--------|-------|-------------|---------|
 | `--blocklist-file <path>` | `-b` | Path to custom blocklist JSON file | Embedded default |
 | `--no-blocklist` | - | **DANGEROUS**: Disable all command validation | `false` |
-| `--audit-log <path>` | `-a` | Path to audit log file | `/var/log/sudo-mcp/audit.log` |
+| `--audit-log <path>` | `-a` | Path to audit log file | Linux: `/var/log/sudo-mcp/audit.log`, macOS: `~/Library/Logs/sudo-mcp/audit.log` |
 | `--timeout <seconds>` | `-t` | Command execution timeout in seconds | `15` |
 
 ### Examples
@@ -323,6 +337,8 @@ After installation, configure your MCP client to use sudo-mcp.
 }
 ```
 
+On macOS, use `/usr/local/bin/sudo-mcp` (or the Homebrew prefix path) instead of `/usr/bin/sudo-mcp`.
+
 **Custom configuration:**
 ```json
 {
@@ -346,7 +362,11 @@ After installation, configure your MCP client to use sudo-mcp.
 
 After installing the binary, simply run:
 ```bash
+# Linux
 claude mcp add sudo-mcp /usr/bin/sudo-mcp
+
+# macOS
+claude mcp add sudo-mcp /usr/local/bin/sudo-mcp
 ```
 
 This automatically configures sudo-mcp in your Claude Code settings.
@@ -418,12 +438,13 @@ Claude: [sudo-mcp blocks the command]
 1. **Claude requests command execution** via MCP protocol over stdio
 2. **sudo-mcp receives the request** and validates the command
 3. **CommandValidator checks** the command against the blocklist (if enabled)
-4. **If allowed**, PkexecExecutor spawns `pkexec sudo <command>`
-5. **Polkit authentication dialog** appears asking for user approval
-6. **User approves or denies** the privilege escalation
-7. **Command executes** (if approved) and output is captured
-8. **AuditLogger records** the execution attempt with full details
-9. **Results returned** to Claude with stdout/stderr/exit code
+4. **If allowed**, the platform executor runs the command with elevated privileges:
+   - **Linux**: `pkexec sudo <command>` - polkit authentication dialogue appears
+   - **macOS**: `sudo -A <command>` - native macOS password dialogue appears via osascript
+5. **User approves or denies** the privilege escalation
+6. **Command executes** (if approved) and output is captured
+7. **AuditLogger records** the execution attempt with full details
+8. **Results returned** to Claude with stdout/stderr/exit code
 
 ## Architecture
 
@@ -436,7 +457,9 @@ SudoExecutionTool
     ↓
 CommandValidator → [validate against blocklist]
     ↓
-PkexecExecutor → [spawn pkexec → sudo process]
+IPrivilegedExecutor
+    ├─ PkexecExecutor (Linux) → [spawn pkexec → sudo process]
+    └─ SudoExecutor (macOS)   → [spawn sudo -A with osascript askpass]
     ↓
 AuditLogger → [log to audit file]
 ```
@@ -451,7 +474,8 @@ AuditLogger → [log to audit file]
 - **LLM context**: The AI may not fully understand command implications
 - **No rollback**: Executed commands cannot be undone
 - **Log tampering**: Audit logs can be deleted with sudo access
-- **GUI required**: pkexec requires a polkit authentication agent (graphical session)
+- **Linux GUI required**: pkexec requires a polkit authentication agent (graphical session)
+- **macOS credential caching**: `sudo` caches credentials for a timeout period, meaning subsequent commands may not prompt
 
 ### Recommended Practices
 
@@ -487,6 +511,12 @@ sudo pacman -S polkit-gnome  # Arch Linux
 sudo apt install policykit-1-gnome  # Debian/Ubuntu
 sudo dnf install polkit-gnome  # Fedora/RHEL
 ```
+
+### macOS password dialogue doesn't appear
+
+**Problem**: No authentication dialogue shown on macOS
+
+**Solution**: Ensure osascript is available (included by default on macOS). If running in a headless environment (SSH session, CI), the osascript dialogue cannot be displayed. sudo-mcp on macOS requires a graphical session.
 
 ### Audit log not created
 

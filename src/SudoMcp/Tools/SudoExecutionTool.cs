@@ -13,18 +13,18 @@ namespace SudoMcp.Tools;
 public class SudoExecutionTool
 {
     private readonly CommandValidator _validator;
-    private readonly PkexecExecutor _executor;
+    private readonly IPrivilegedExecutor _executor;
     private readonly AuditLogger _auditLogger;
 
     /// <summary>
     /// Initialises a new instance of the <see cref="SudoExecutionTool"/> class.
     /// </summary>
     /// <param name="validator">Command validator service.</param>
-    /// <param name="executor">Pkexec executor service.</param>
+    /// <param name="executor">Privileged executor service.</param>
     /// <param name="auditLogger">Audit logger service.</param>
     public SudoExecutionTool(
         CommandValidator validator,
-        PkexecExecutor executor,
+        IPrivilegedExecutor executor,
         AuditLogger auditLogger)
     {
         _validator = validator;
@@ -68,7 +68,7 @@ public class SudoExecutionTool
             });
         }
 
-        CommandExecutionResult result = await _executor.ExecuteWithPkexec(command, timeoutSeconds, cancellationToken);
+        CommandExecutionResult result = await _executor.ExecuteAsync(command, timeoutSeconds, cancellationToken);
 
         await _auditLogger.LogExecutedCommand(command, result);
 

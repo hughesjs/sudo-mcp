@@ -48,6 +48,10 @@ jobs:
             name: x64
           - rid: linux-arm64
             name: arm64
+          - rid: osx-x64
+            name: macos-x64
+          - rid: osx-arm64
+            name: macos-arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -94,6 +98,18 @@ jobs:
         with:
           name: sudo-mcp-arm64
           path: ./artifacts/arm64
+
+      - name: Download macOS x64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-macos-x64
+          path: ./artifacts/macos-x64
+
+      - name: Download macOS ARM64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-macos-arm64
+          path: ./artifacts/macos-arm64
 
       - name: Create x64 tarball
         run: |
@@ -149,6 +165,46 @@ jobs:
           # Create tarball
           tar -czf "sudo-mcp-arm64-v${VERSION}.tar.gz" "${TARBALL_DIR}"
 
+      - name: Create macOS x64 tarball
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          TARBALL_DIR="sudo-mcp-macos-x64-v${VERSION}"
+          mkdir -p "${TARBALL_DIR}"
+
+          cp ./artifacts/macos-x64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
+          chmod +x "${TARBALL_DIR}/sudo-mcp"
+
+          cp scripts/install.sh "${TARBALL_DIR}/"
+          cp scripts/uninstall.sh "${TARBALL_DIR}/"
+          chmod +x "${TARBALL_DIR}/install.sh"
+          chmod +x "${TARBALL_DIR}/uninstall.sh"
+
+          cp README.md "${TARBALL_DIR}/"
+          cp SECURITY.md "${TARBALL_DIR}/"
+          cp LICENSE "${TARBALL_DIR}/"
+
+          tar -czf "sudo-mcp-macos-x64-v${VERSION}.tar.gz" "${TARBALL_DIR}"
+
+      - name: Create macOS ARM64 tarball
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          TARBALL_DIR="sudo-mcp-macos-arm64-v${VERSION}"
+          mkdir -p "${TARBALL_DIR}"
+
+          cp ./artifacts/macos-arm64/SudoMcp "${TARBALL_DIR}/sudo-mcp"
+          chmod +x "${TARBALL_DIR}/sudo-mcp"
+
+          cp scripts/install.sh "${TARBALL_DIR}/"
+          cp scripts/uninstall.sh "${TARBALL_DIR}/"
+          chmod +x "${TARBALL_DIR}/install.sh"
+          chmod +x "${TARBALL_DIR}/uninstall.sh"
+
+          cp README.md "${TARBALL_DIR}/"
+          cp SECURITY.md "${TARBALL_DIR}/"
+          cp LICENSE "${TARBALL_DIR}/"
+
+          tar -czf "sudo-mcp-macos-arm64-v${VERSION}.tar.gz" "${TARBALL_DIR}"
+
       - name: Create combined tarball for COPR
         run: |
           VERSION="${{ needs.version.outputs.version }}"
@@ -188,6 +244,20 @@ jobs:
         with:
           name: sudo-mcp-combined-tarball
           path: sudo-mcp-${{ needs.version.outputs.version }}.tar.gz
+          if-no-files-found: error
+
+      - name: Upload macOS x64 tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudo-mcp-macos-x64-tarball
+          path: sudo-mcp-macos-x64-v${{ needs.version.outputs.version }}.tar.gz
+          if-no-files-found: error
+
+      - name: Upload macOS ARM64 tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudo-mcp-macos-arm64-tarball
+          path: sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}.tar.gz
           if-no-files-found: error
 
   prepare-aur-package:
@@ -349,6 +419,16 @@ jobs:
         with:
           name: sudo-mcp-combined-tarball
 
+      - name: Download macOS x64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-macos-x64-tarball
+
+      - name: Download macOS ARM64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-macos-arm64-tarball
+
       - name: Download PKGBUILD
         uses: actions/download-artifact@v4
         with:
@@ -371,7 +451,33 @@ jobs:
 
             ## Installation
 
-            ### Binary Release (Recommended)
+            ### macOS (Homebrew)
+
+            ```bash
+            brew install hughesjs/tap/sudo-mcp
+            ```
+
+            ### macOS (Binary Release)
+
+            **Apple Silicon (M1/M2/M3/M4)**:
+            ```bash
+            curl -LO https://github.com/hughesjs/sudo-mcp/releases/download/v${{ needs.version.outputs.version }}/sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}.tar.gz
+            tar -xzf sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}.tar.gz
+            cd sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}
+            chmod +x install.sh
+            ./install.sh
+            ```
+
+            **Intel Mac**:
+            ```bash
+            curl -LO https://github.com/hughesjs/sudo-mcp/releases/download/v${{ needs.version.outputs.version }}/sudo-mcp-macos-x64-v${{ needs.version.outputs.version }}.tar.gz
+            tar -xzf sudo-mcp-macos-x64-v${{ needs.version.outputs.version }}.tar.gz
+            cd sudo-mcp-macos-x64-v${{ needs.version.outputs.version }}
+            chmod +x install.sh
+            ./install.sh
+            ```
+
+            ### Linux (Binary Release)
 
             **x86_64 (Intel/AMD)**:
             ```bash
@@ -420,6 +526,8 @@ jobs:
           artifacts: |
             sudo-mcp-x64-v${{ needs.version.outputs.version }}.tar.gz
             sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
+            sudo-mcp-macos-x64-v${{ needs.version.outputs.version }}.tar.gz
+            sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}.tar.gz
             sudo-mcp-${{ needs.version.outputs.version }}.tar.gz
             PKGBUILD
             sudo-mcp.spec
@@ -497,3 +605,66 @@ jobs:
             --chroot fedora-42-aarch64 \
             --chroot epel-9-x86_64 \
             --chroot epel-9-aarch64
+
+  prepare-homebrew-formula:
+    name: Prepare Homebrew Formula
+    runs-on: ubuntu-latest
+    needs: [version, create-tarballs]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download macOS x64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-macos-x64-tarball
+
+      - name: Download macOS ARM64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-macos-arm64-tarball
+
+      - name: Compute SHA256 checksums
+        id: checksums
+        run: |
+          SHA256_X64=$(sha256sum sudo-mcp-macos-x64-v${{ needs.version.outputs.version }}.tar.gz | cut -d' ' -f1)
+          SHA256_ARM64=$(sha256sum sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}.tar.gz | cut -d' ' -f1)
+          echo "sha256_x64=${SHA256_X64}" >> "$GITHUB_OUTPUT"
+          echo "sha256_arm64=${SHA256_ARM64}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Homebrew formula
+        run: |
+          ./scripts/generate-homebrew-formula.sh \
+            "${{ needs.version.outputs.version }}" \
+            --sha256-x64 "${{ steps.checksums.outputs.sha256_x64 }}" \
+            --sha256-arm64 "${{ steps.checksums.outputs.sha256_arm64 }}" \
+            > sudo-mcp.rb
+
+      - name: Upload formula
+        uses: actions/upload-artifact@v4
+        with:
+          name: homebrew-formula
+          path: sudo-mcp.rb
+          if-no-files-found: error
+
+  publish-homebrew:
+    name: Publish to Homebrew Tap
+    runs-on: ubuntu-latest
+    needs: [version, create-release, prepare-homebrew-formula]
+    steps:
+      - name: Download formula
+        uses: actions/download-artifact@v4
+        with:
+          name: homebrew-formula
+
+      - name: Push to tap repository
+        uses: dmnemec/copy_file_to_another_repo_action@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        with:
+          source_file: sudo-mcp.rb
+          destination_repo: hughesjs/homebrew-tap
+          destination_folder: Formula
+          user_email: actions@github.com
+          user_name: GitHub Actions
+          commit_message: "Update sudo-mcp to v${{ needs.version.outputs.version }}"

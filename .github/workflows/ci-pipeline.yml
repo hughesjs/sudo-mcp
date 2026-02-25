@@ -10,8 +10,15 @@ on:
 
 jobs:
   unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
+    name: Unit Tests (${{ matrix.os.name }})
+    runs-on: ${{ matrix.os.runner }}
+    strategy:
+      matrix:
+        os:
+          - name: Linux
+            runner: ubuntu-latest
+          - name: macOS
+            runner: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -123,6 +130,31 @@ jobs:
         with:
           name: tarball-combined
           path: sudo-mcp-0.0.0.tar.gz
+
+  build-macos:
+    name: Build macOS Binary
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Build macOS ARM64 binary
+        run: |
+          dotnet publish src/SudoMcp/SudoMcp.csproj \
+            -c Release \
+            -r osx-arm64 \
+            --self-contained \
+            -o ./publish/macos-arm64 \
+            /p:PublishSingleFile=true
+
+      - name: Verify binary runs
+        run: ./publish/macos-arm64/SudoMcp --help
 
   test-install:
     name: Test Install (${{ matrix.arch.name }})

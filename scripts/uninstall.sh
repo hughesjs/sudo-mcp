@@ -3,9 +3,24 @@ set -euo pipefail
 
 # sudo-mcp uninstallation script
 
-INSTALL_DIR="/usr/bin"
-CONFIG_DIR="/etc/sudo-mcp"
-LOG_DIR="/var/log/sudo-mcp"
+OS="$(uname -s)"
+
+case "$OS" in
+    Darwin)
+        INSTALL_DIR="/usr/local/bin"
+        CONFIG_DIR="$HOME/.config/sudo-mcp"
+        LOG_DIR="$HOME/Library/Logs/sudo-mcp"
+        ;;
+    Linux)
+        INSTALL_DIR="/usr/bin"
+        CONFIG_DIR="/etc/sudo-mcp"
+        LOG_DIR="/var/log/sudo-mcp"
+        ;;
+    *)
+        echo "Error: Unsupported operating system: $OS"
+        exit 1
+        ;;
+esac
 
 echo "=== sudo-mcp Uninstallation Script ==="
 echo ""
@@ -25,7 +40,11 @@ if [ -d "$CONFIG_DIR" ]; then
     read -p "Remove configuration directory $CONFIG_DIR? (y/N) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        sudo rm -rf "$CONFIG_DIR"
+        if [ "$OS" = "Darwin" ]; then
+            rm -rf "$CONFIG_DIR"
+        else
+            sudo rm -rf "$CONFIG_DIR"
+        fi
         echo "Configuration removed"
     else
         echo "Configuration kept"
@@ -40,7 +59,11 @@ if [ -d "$LOG_DIR" ]; then
     read -p "Remove log directory $LOG_DIR (contains audit logs)? (y/N) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        sudo rm -rf "$LOG_DIR"
+        if [ "$OS" = "Darwin" ]; then
+            rm -rf "$LOG_DIR"
+        else
+            sudo rm -rf "$LOG_DIR"
+        fi
         echo "Logs removed"
     else
         echo "Logs kept"

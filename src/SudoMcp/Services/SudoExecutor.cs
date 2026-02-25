@@ -1,16 +1,20 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using SudoMcp.Models;
 
 namespace SudoMcp.Services;
 
 /// <summary>
-/// Executes commands with elevated privileges using pkexec and sudo (Linux).
+/// Executes commands with elevated privileges using sudo -A with an osascript askpass helper (macOS).
 /// </summary>
-public class PkexecExecutor : IPrivilegedExecutor
+[SupportedOSPlatform("macos")]
+public class SudoExecutor : IPrivilegedExecutor
 {
     private readonly ExecutionOptions _options;
+    private string? _askpassPath;
+    private readonly object _askpassLock = new();
 
-    public PkexecExecutor(ExecutionOptions options)
+    public SudoExecutor(ExecutionOptions options)
     {
         _options = options;
     }
@@ -21,11 +25,11 @@ public class PkexecExecutor : IPrivilegedExecutor
         int? timeoutSeconds = null,
         CancellationToken cancellationToken = default)
     {
-        // Use ArgumentList to pass arguments directly without shell parsing
-        // This avoids complex escaping issues with ProcessStartInfo.Arguments
+        string askpass = EnsureAskpassScript();
+
         ProcessStartInfo startInfo = new()
         {
-            FileName = "pkexec",
+            FileName = "sudo",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = true,
@@ -33,15 +37,12 @@ public class PkexecExecutor : IPrivilegedExecutor
             CreateNoWindow = true
         };
 
-        // Each argument passed separately - no shell escaping needed
-        startInfo.ArgumentList.Add("sudo");
-        startInfo.ArgumentList.Add("-S");
+        startInfo.Environment["SUDO_ASKPASS"] = askpass;
+        startInfo.ArgumentList.Add("-A");
         startInfo.ArgumentList.Add("--");
         startInfo.ArgumentList.Add("bash");
         startInfo.ArgumentList.Add("-c");
-        startInfo.ArgumentList.Add(command);  // Command passed directly to bash
-        
-        startInfo.Environment["PKEXEC_UID"] = Environment.GetEnvironmentVariable("UID") ?? "0";
+        startInfo.ArgumentList.Add(command);
 
         try
         {
@@ -54,7 +55,6 @@ public class PkexecExecutor : IPrivilegedExecutor
             Task<string> stderrTask = Task.Run(async () =>
                 await process.StandardError.ReadToEndAsync(cancellationToken), cancellationToken);
 
-            // Close stdin since pkexec doesn't need it for authentication (uses polkit agent)
             process.StandardInput.Close();
 
             int effectiveTimeout = timeoutSeconds ?? _options.TimeoutSeconds;
@@ -81,7 +81,7 @@ public class PkexecExecutor : IPrivilegedExecutor
                     ErrorMessage = $"Command execution timed out after {effectiveTimeout} seconds"
                 };
             }
-            
+
             string stdout = await stdoutTask;
             string stderr = await stderrTask;
             int exitCode = process.ExitCode;
@@ -95,8 +95,10 @@ public class PkexecExecutor : IPrivilegedExecutor
                 ErrorMessage = exitCode switch
                 {
                     0 => null,
-                    126 => "Authorisation cancelled - user dismissed authentication dialogue",
-                    127 => "Authorisation failed - user not authorised to execute this command",
+                    1 when stderr.Contains("incorrect password", StringComparison.OrdinalIgnoreCase)
+                        => "Authorisation failed - incorrect password",
+                    1 when stderr.Contains("cancelled", StringComparison.OrdinalIgnoreCase)
+                        => "Authorisation cancelled - user dismissed authentication dialogue",
                     _ => $"Command failed with exit code {exitCode}"
                 }
             };
@@ -119,6 +121,38 @@ public class PkexecExecutor : IPrivilegedExecutor
                 ErrorMessage = $"Failed to execute command: {ex.Message}",
                 StandardError = ex.ToString()
             };
+        }
+    }
+
+    /// <summary>
+    /// Creates the askpass script on first use and returns its path.
+    /// The script uses osascript to display a native macOS password dialogue.
+    /// </summary>
+    private string EnsureAskpassScript()
+    {
+        if (_askpassPath is not null)
+            return _askpassPath;
+
+        lock (_askpassLock)
+        {
+            if (_askpassPath is not null)
+                return _askpassPath;
+
+            string tempDir = Path.Combine(Path.GetTempPath(), $"sudo-mcp-{Environment.ProcessId}");
+            Directory.CreateDirectory(tempDir);
+
+            string scriptPath = Path.Combine(tempDir, "askpass.sh");
+            File.WriteAllText(scriptPath, """
+                #!/bin/bash
+                exec osascript -e 'display dialog "sudo-mcp requires administrator privileges to execute a command." default answer "" with hidden answer with title "sudo-mcp" with icon caution buttons {"Cancel", "OK"} default button "OK"' -e 'text returned of result'
+                """);
+
+            // Set user-only executable permissions (0700)
+            File.SetUnixFileMode(scriptPath,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+            _askpassPath = scriptPath;
+            return scriptPath;
         }
     }
 }

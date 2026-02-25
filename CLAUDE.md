@@ -2,14 +2,15 @@
 
 ## Project Overview
 
-sudo-mcp is a C# MCP server that allows AI models to execute privileged commands via sudo/pkexec. This is a **production tool** despite inherent security risks.
+sudo-mcp is a C# MCP server that allows AI models to execute privileged commands via sudo/pkexec. Supports Linux (polkit/pkexec) and macOS (sudo with osascript askpass). This is a **production tool** despite inherent security risks.
 
 ## Key Technologies
 
 - **.NET 10** with C# 12
 - **MCP (Model Context Protocol)** - stdio transport
 - **System.CommandLine** - argument parsing
-- **polkit/pkexec** - privilege escalation
+- **polkit/pkexec** - privilege escalation (Linux)
+- **sudo -A with osascript** - privilege escalation (macOS)
 - **xUnit** - testing framework
 
 ## Project Structure
@@ -20,8 +21,10 @@ src/SudoMcp/
 ├── Tools/
 │   └── SudoExecutionTool.cs   # MCP tool implementation
 ├── Services/
+│   ├── IPrivilegedExecutor.cs # Executor interface (platform abstraction)
 │   ├── CommandValidator.cs     # Blocklist validation
-│   ├── PkexecExecutor.cs      # pkexec/sudo execution
+│   ├── PkexecExecutor.cs      # pkexec/sudo execution (Linux)
+│   ├── SudoExecutor.cs        # sudo -A execution with osascript askpass (macOS)
 │   └── AuditLogger.cs         # Structured audit logging
 ├── Models/
 │   ├── ExecutionOptions.cs
@@ -116,6 +119,14 @@ dotnet test --filter "Category=Integration"
 - Use `[Description]` attributes for MCP metadata
 - Namespace: `ModelContextProtocol.Server`
 
+### Platform Executor Selection
+
+The correct executor is registered at DI time based on the OS:
+- **Linux**: `PkexecExecutor` - uses `pkexec sudo -S -- bash -c <command>`
+- **macOS**: `SudoExecutor` - uses `sudo -A -- bash -c <command>` with an osascript askpass helper
+
+Both implement `IPrivilegedExecutor` which `SudoExecutionTool` depends on.
+
 ### Timeout Handling
 
 - **Global default**: 15 seconds (CLI `--timeout`)
@@ -200,6 +211,7 @@ chmod +x scripts/install.sh
 
 Or build manually:
 ```bash
+# Linux
 dotnet publish src/SudoMcp/SudoMcp.csproj \
     -c Release \
     -r linux-x64 \
@@ -207,6 +219,15 @@ dotnet publish src/SudoMcp/SudoMcp.csproj \
     -o ./publish \
     /p:PublishSingleFile=true
 sudo cp publish/SudoMcp /usr/bin/sudo-mcp
+
+# macOS
+dotnet publish src/SudoMcp/SudoMcp.csproj \
+    -c Release \
+    -r osx-arm64 \
+    --self-contained \
+    -o ./publish \
+    /p:PublishSingleFile=true
+sudo cp publish/SudoMcp /usr/local/bin/sudo-mcp
 ```
 
 ### Testing Integration
@@ -283,10 +304,13 @@ The project uses GitHub Actions for automated releases on every push to `master`
 9. **COPR Publishing**: Automatic submission to Fedora COPR
 
 **Release Artifacts**:
-- `sudo-mcp-x64-v{version}.tar.gz` - x86_64 complete package
-- `sudo-mcp-arm64-v{version}.tar.gz` - ARM64 complete package
+- `sudo-mcp-x64-v{version}.tar.gz` - Linux x86_64 complete package
+- `sudo-mcp-arm64-v{version}.tar.gz` - Linux ARM64 complete package
+- `sudo-mcp-macos-x64-v{version}.tar.gz` - macOS Intel complete package
+- `sudo-mcp-macos-arm64-v{version}.tar.gz` - macOS Apple Silicon complete package
 - `PKGBUILD` - Arch Linux package file
 - `sudo-mcp.spec` - Fedora/COPR RPM spec file
+- Homebrew formula published to `hughesjs/homebrew-tap`
 
 ### Commit Message Guidelines
 
@@ -366,13 +390,17 @@ For automated package publishing, configure these secrets in GitHub repository s
 - `COPR_CONFIG` - Full content from https://copr.fedoraproject.org/api/ (contains login + token)
 - The COPR project is automatically created by the workflow if it doesn't exist
 
+**Homebrew Tap Publishing**:
+- `HOMEBREW_TAP_TOKEN` - GitHub PAT with `repo` scope for the `hughesjs/homebrew-tap` repository
+
 ### CI for Pull Requests
 
-**Workflow**: `.github/workflows/ci-tests.yml`
+**Workflow**: `.github/workflows/ci-pipeline.yml`
 
 Runs on all PRs and pushes to master:
-- **Unit tests**: Fast tests without Docker (`dotnet test --filter "Category!=Integration"`)
-- **Integration tests**: Full privilege escalation tests using TestContainers (`dotnet test --filter "Category=Integration"`)
+- **Unit tests**: Fast tests without Docker on Linux and macOS (`dotnet test --filter "Category!=Integration"`)
+- **Integration tests**: Full privilege escalation tests using TestContainers (`dotnet test --filter "Category=Integration"`) — Linux only
+- **macOS build**: Builds and verifies macOS ARM64 binary
 - Uploads test results as artifacts
 - Uses .NET 10 preview on Ubuntu runners
 
