@@ -73,6 +73,20 @@ On macOS, sudo-mcp uses `sudo -A` with an osascript-based askpass helper to prom
 
 ---
 
+## Windows Security Notes
+
+On Windows, sudo-mcp uses the built-in `sudo` command introduced in Windows 11 24H2 to execute commands via `sudo cmd /c <command>`. A UAC (User Account Control) elevation prompt appears for each invocation.
+
+**Key considerations:**
+
+- **New feature, less battle-tested**: Windows `sudo` is a relatively recent addition (24H2+) and has not undergone the decades of hardening that Unix sudo and polkit have. Expect rough edges.
+- **UAC auto-approval risk**: If an administrator account has UAC disabled (a known Windows misconfiguration), elevation prompts will not appear and commands will execute silently with full privileges. Ensure UAC is enabled.
+- **`cmd /c` shell**: Commands are executed through `cmd /c`, so blocklist patterns must account for Windows command syntax (e.g., `format`, `diskpart`, `reg`, `bcdedit`). Users can still invoke PowerShell from within `cmd /c`.
+- **No fine-grained policy control**: Windows has no equivalent of polkit's per-command policy rules. UAC is all-or-nothing per elevation request — you cannot selectively allow certain commands while denying others at the OS level.
+- **Credential caching**: UAC may remember elevation consent for the duration of a session, meaning subsequent commands may not prompt the user again.
+
+---
+
 ## No Security Support
 
 This tool is intentionally dangerous by design. If you find a blocklist bypass, that's expected. There is no security contact because there is no expectation of security.

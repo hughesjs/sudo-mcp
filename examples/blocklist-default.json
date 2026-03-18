@@ -25,7 +25,11 @@
       "^mv\\s+.*\\s+/dev/null\\s*$",
       "^diskutil\\s+(eraseDisk|partitionDisk|secureErase|zeroDisk)\\s+.*$",
       "^diskutil\\s+apfs\\s+(deleteContainer|deleteVolume)\\s+.*$",
-      "^newfs(_hfs|_apfs|_exfat|_msdos|_udf)?\\s+.*$"
+      "^newfs(_hfs|_apfs|_exfat|_msdos|_udf)?\\s+.*$",
+      "^format\\s+[A-Za-z]:\\s*.*$",
+      "^bcdedit\\s+.*$",
+      "^reg\\s+(add|delete|import)\\s+HKLM\\\\(SYSTEM|SOFTWARE|SAM|SECURITY)\\b.*$",
+      "^(powershell|pwsh)(\\.exe)?\\s+(-Command\\s+)?Remove-Item\\s+(?=.*-Recurse)(?=.*-Force).*$"
     ],
     "BlockedBinaries": [
       "mkfs.ext2",
@@ -45,7 +49,13 @@
       "newfs_apfs",
       "newfs_exfat",
       "newfs_msdos",
-      "newfs_udf"
+      "newfs_udf",
+      "diskpart",
+      "diskpart.exe",
+      "bcdedit",
+      "bcdedit.exe",
+      "cipher",
+      "cipher.exe"
     ]
   }
 }

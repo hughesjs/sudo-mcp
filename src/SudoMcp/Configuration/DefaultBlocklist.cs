@@ -61,7 +61,19 @@ public static partial class DefaultBlocklist
             // macOS disk utilities
             DiskutilDestructive(),
             DiskutilApfsDestructive(),
-            NewfsAny()
+            NewfsAny(),
+
+            // Windows disk formatting
+            FormatDrive(),
+
+            // Windows boot config editor
+            BcdeditAny(),
+
+            // Windows registry modifications to system hives
+            RegSystemHive(),
+
+            // PowerShell recursive deletion
+            PowerShellRecursiveDelete()
         ],
 
         BlockedBinaries =
@@ -85,7 +97,16 @@ public static partial class DefaultBlocklist
             "newfs_apfs",
             "newfs_exfat",
             "newfs_msdos",
-            "newfs_udf"
+            "newfs_udf",
+            // Windows disk/system utilities
+            "diskpart",
+            "diskpart.exe",
+            // Windows boot configuration (bare command caught here; with args caught by regex)
+            "bcdedit",
+            "bcdedit.exe",
+            // Windows secure wipe utility
+            "cipher",
+            "cipher.exe"
         ]
     };
 
@@ -147,4 +168,20 @@ public static partial class DefaultBlocklist
     // macOS filesystem creation
     [GeneratedRegex(@"^newfs(_hfs|_apfs|_exfat|_msdos|_udf)?\s+.*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
     private static partial Regex NewfsAny();
+
+    // Windows format command
+    [GeneratedRegex(@"^format\s+[A-Za-z]:\s*.*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex FormatDrive();
+
+    // Windows bcdedit (boot configuration)
+    [GeneratedRegex(@"^bcdedit\s+.*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex BcdeditAny();
+
+    // Windows registry edits to system hives (HKLM\SYSTEM, HKLM\SOFTWARE)
+    [GeneratedRegex(@"^reg\s+(add|delete|import)\s+HKLM\\(SYSTEM|SOFTWARE|SAM|SECURITY)\b.*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex RegSystemHive();
+
+    // PowerShell recursive force deletion (-Recurse and -Force in any order)
+    [GeneratedRegex(@"^(powershell|pwsh)(\.exe)?\s+(-Command\s+)?Remove-Item\s+(?=.*-Recurse)(?=.*-Force).*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex PowerShellRecursiveDelete();
 }

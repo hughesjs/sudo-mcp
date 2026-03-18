@@ -79,10 +79,41 @@ jobs:
           path: ./publish/${{ matrix.arch.name }}/SudoMcp
           if-no-files-found: error
 
+  build-windows-binary:
+    name: Build Windows x64 Binary
+    runs-on: ubuntu-latest
+    needs: version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Build Windows x64 binary
+        run: |
+          dotnet publish src/SudoMcp/SudoMcp.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained \
+            -o ./publish/win-x64 \
+            /p:PublishSingleFile=true \
+            /p:Version=${{ needs.version.outputs.version }}
+
+      - name: Upload Windows x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudo-mcp-win-x64
+          path: ./publish/win-x64/SudoMcp.exe
+          if-no-files-found: error
+
   create-tarballs:
     name: Create Release Tarballs
     runs-on: ubuntu-latest
-    needs: [version, build-binaries]
+    needs: [version, build-binaries, build-windows-binary]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -260,6 +291,36 @@ jobs:
           path: sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}.tar.gz
           if-no-files-found: error
 
+      - name: Download Windows x64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-win-x64
+          path: ./artifacts/win-x64
+
+      - name: Create Windows x64 zip
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          ZIP_DIR="sudo-mcp-win-x64-v${VERSION}"
+          mkdir -p "${ZIP_DIR}"
+
+          cp ./artifacts/win-x64/SudoMcp.exe "${ZIP_DIR}/sudo-mcp.exe"
+
+          cp scripts/install.ps1 "${ZIP_DIR}/"
+          cp scripts/uninstall.ps1 "${ZIP_DIR}/"
+
+          cp README.md "${ZIP_DIR}/"
+          cp SECURITY.md "${ZIP_DIR}/"
+          cp LICENSE "${ZIP_DIR}/"
+
+          zip -r "sudo-mcp-win-x64-v${VERSION}.zip" "${ZIP_DIR}"
+
+      - name: Upload Windows x64 zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudo-mcp-win-x64-zip
+          path: sudo-mcp-win-x64-v${{ needs.version.outputs.version }}.zip
+          if-no-files-found: error
+
   prepare-aur-package:
     name: Prepare AUR Package
     runs-on: ubuntu-latest
@@ -331,7 +392,7 @@ jobs:
   create-tag:
     name: Create Git Tag
     runs-on: ubuntu-latest
-    needs: [version, build-binaries, create-tarballs, prepare-aur-package]
+    needs: [version, build-binaries, build-windows-binary, create-tarballs, prepare-aur-package]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -429,6 +490,11 @@ jobs:
         with:
           name: sudo-mcp-macos-arm64-tarball
 
+      - name: Download Windows x64 zip
+        uses: actions/download-artifact@v4
+        with:
+          name: sudo-mcp-win-x64-zip
+
       - name: Download PKGBUILD
         uses: actions/download-artifact@v4
         with:
@@ -491,6 +557,19 @@ jobs:
             ./install.sh
             ```
 
+            ### Windows (Binary Release)
+
+            **x64 (Intel/AMD)**:
+            ```powershell
+            # Download and extract
+            Invoke-WebRequest -Uri "https://github.com/hughesjs/sudo-mcp/releases/download/v${{ needs.version.outputs.version }}/sudo-mcp-win-x64-v${{ needs.version.outputs.version }}.zip" -OutFile sudo-mcp.zip
+            Expand-Archive sudo-mcp.zip -DestinationPath .
+            cd sudo-mcp-win-x64-v${{ needs.version.outputs.version }}
+
+            # Install (requires admin)
+            .\install.ps1
+            ```
+
             ### Arch Linux (AUR)
 
             ```bash
@@ -522,6 +601,7 @@ jobs:
             sudo-mcp-arm64-v${{ needs.version.outputs.version }}.tar.gz
             sudo-mcp-macos-x64-v${{ needs.version.outputs.version }}.tar.gz
             sudo-mcp-macos-arm64-v${{ needs.version.outputs.version }}.tar.gz
+            sudo-mcp-win-x64-v${{ needs.version.outputs.version }}.zip
             sudo-mcp-${{ needs.version.outputs.version }}.tar.gz
             PKGBUILD
             sudo-mcp.spec

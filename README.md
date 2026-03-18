@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/github/license/hughesjs/sudo-mcp?style=for-the-badge)](https://github.com/hughesjs/sudo-mcp/blob/master/LICENSE)
 [![Made in Scotland](https://raw.githubusercontent.com/hughesjs/custom-badges/master/made-in/made-in-scotland.svg)](https://github.com/hughesjs/custom-badges)
 
-MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo. On Linux, privilege escalation uses polkit/pkexec with your desktop authentication agent. On macOS, it uses `sudo -A` with a native password dialogue via osascript.
+MCP (Model Context Protocol) server that allows AI models to execute commands with elevated privileges via sudo. On Linux, privilege escalation uses polkit/pkexec with your desktop authentication agent. On macOS, it uses `sudo -A` with a native password dialogue via osascript. On Windows 11 24H2+, it uses the built-in `sudo` command with UAC elevation.
 
 > [!CAUTION]
 > ## <img src="https://i.gifer.com/ULMC.gif" width="20"> SECURITY WARNING <img src="https://i.gifer.com/ULMC.gif" width="20">
@@ -34,17 +34,22 @@ MCP (Model Context Protocol) server that allows AI models to execute commands wi
 
 ## Overview
 
-sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP client) to enable execution of privileged commands. On Linux it uses polkit/pkexec for authentication; on macOS it uses `sudo -A` with a native osascript password dialogue. Both platforms support configurable command validation.
+sudo-mcp is a C# MCP server that integrates with Claude Desktop (or any MCP client) to enable execution of privileged commands. On Linux it uses polkit/pkexec for authentication; on macOS it uses `sudo -A` with a native osascript password dialogue; on Windows 11 it uses the built-in `sudo` command with UAC elevation. All platforms support configurable command validation.
 
 **Key Features:**
-- 🔐 **Platform-Native Privilege Escalation** - polkit/pkexec on Linux, sudo with native macOS password dialogue
-- ✅ **Configurable Command Validation** - Optional blocklist to prevent dangerous operations (Linux and macOS patterns)
+- 🔐 **Platform-Native Privilege Escalation** - polkit/pkexec on Linux, sudo with native macOS password dialogue, Windows sudo with UAC
+- ✅ **Configurable Command Validation** - Optional blocklist to prevent dangerous operations (Linux, macOS, and Windows patterns)
 - 📝 **Comprehensive Audit Logging** - Every command attempt logged with full details
 - ⚙️ **Runtime Configuration** - Command-line arguments for blocklist, timeouts, and logging
 - 🚀 **.NET 10** - Built on the latest .NET platform with C# 12
-- 🍎 **Cross-Platform** - Supports Linux (x64/ARM64) and macOS (Intel/Apple Silicon)
+- 🍎 **Cross-Platform** - Supports Linux (x64/ARM64), macOS (Intel/Apple Silicon), and Windows 11 (x64)
 
 ## Quick Start (Claude Code)
+
+**Windows 11 (24H2+):** Download the `.zip` from [releases](https://github.com/hughesjs/sudo-mcp/releases/latest), extract, run `.\install.ps1` as Administrator, then:
+```powershell
+claude mcp add sudo-mcp "$env:ProgramFiles\sudo-mcp\sudo-mcp.exe"
+```
 
 **macOS:** Download from [releases](https://github.com/hughesjs/sudo-mcp/releases/latest), extract, run `./install.sh`, then:
 ```bash
@@ -71,9 +76,10 @@ Restart Claude Code and approve authentication prompts when commands execute. **
 ## Prerequisites
 
 - **(If Building) .NET 10 SDK** - Install from [dotnet.microsoft.com](https://dotnet.microsoft.com/)
-- **Linux or macOS** - Supported platforms
+- **Linux, macOS, or Windows 11** - Supported platforms
 - **Linux**: Polkit authentication agent - Required for graphical authentication (typically included in desktop environments)
 - **macOS**: `sudo` (included by default) - Uses native osascript password dialogue for authentication
+- **Windows 11 24H2+**: Built-in `sudo` command - enable in Settings > System > For Developers
 - **Claude Desktop** - Or any MCP-compatible client
 
 ## Installation
@@ -100,6 +106,17 @@ tar -xzf sudo-mcp-arm64-vVERSION.tar.gz
 cd sudo-mcp-arm64-vVERSION
 chmod +x install.sh
 ./install.sh
+```
+
+### Windows (Binary Release)
+
+**Step 1**: Visit the [Releases Page](https://github.com/hughesjs/sudo-mcp/releases/latest) to download `sudo-mcp-win-x64-vVERSION.zip`.
+
+**Step 2**: Extract and install (as Administrator):
+```powershell
+Expand-Archive sudo-mcp-win-x64-vVERSION.zip -DestinationPath .
+cd sudo-mcp-win-x64-vVERSION
+.\install.ps1
 ```
 
 ### Arch Linux (AUR)
@@ -191,7 +208,7 @@ sudo-mcp supports the following command-line arguments for runtime configuration
 |--------|-------|-------------|---------|
 | `--blocklist-file <path>` | `-b` | Path to custom blocklist JSON file | Embedded default |
 | `--no-blocklist` | - | **DANGEROUS**: Disable all command validation | `false` |
-| `--audit-log <path>` | `-a` | Path to audit log file | Linux: `/var/log/sudo-mcp/audit.log`, macOS: `~/Library/Logs/sudo-mcp/audit.log` |
+| `--audit-log <path>` | `-a` | Path to audit log file | Linux: `/var/log/sudo-mcp/audit.log`, macOS: `~/Library/Logs/sudo-mcp/audit.log`, Windows: `%LOCALAPPDATA%\sudo-mcp\audit.log` |
 | `--timeout <seconds>` | `-t` | Command execution timeout in seconds | `15` |
 
 ### Examples
@@ -318,6 +335,7 @@ After installation, configure your MCP client to use sudo-mcp.
 **Configuration file location:**
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 **Basic configuration:**
 ```json
@@ -360,6 +378,11 @@ claude mcp add sudo-mcp /usr/bin/sudo-mcp
 
 # macOS
 claude mcp add sudo-mcp /usr/local/bin/sudo-mcp
+```
+
+On Windows, use `%ProgramFiles%\sudo-mcp\sudo-mcp.exe`:
+```powershell
+claude mcp add sudo-mcp "$env:ProgramFiles\sudo-mcp\sudo-mcp.exe"
 ```
 
 This automatically configures sudo-mcp in your Claude Code settings.
@@ -434,6 +457,7 @@ Claude: [sudo-mcp blocks the command]
 4. **If allowed**, the platform executor runs the command with elevated privileges:
    - **Linux**: `pkexec sudo <command>` - polkit authentication dialogue appears
    - **macOS**: `sudo -A <command>` - native macOS password dialogue appears via osascript
+   - **Windows**: `sudo cmd /c <command>` - UAC elevation prompt appears
 5. **User approves or denies** the privilege escalation
 6. **Command executes** (if approved) and output is captured
 7. **AuditLogger records** the execution attempt with full details
@@ -451,8 +475,9 @@ SudoExecutionTool
 CommandValidator → [validate against blocklist]
     ↓
 IPrivilegedExecutor
-    ├─ PkexecExecutor (Linux) → [spawn pkexec → sudo process]
-    └─ SudoExecutor (macOS)   → [spawn sudo -A with osascript askpass]
+    ├─ PkexecExecutor (Linux)    → [spawn pkexec → sudo process]
+    ├─ SudoExecutor (macOS)      → [spawn sudo -A with osascript askpass]
+    └─ WindowsSudoExecutor (Win) → [spawn sudo cmd /c]
     ↓
 AuditLogger → [log to audit file]
 ```
@@ -469,6 +494,8 @@ AuditLogger → [log to audit file]
 - **Log tampering**: Audit logs can be deleted with sudo access
 - **Linux GUI required**: pkexec requires a polkit authentication agent (graphical session)
 - **macOS credential caching**: `sudo` caches credentials for a timeout period, meaning subsequent commands may not prompt
+- **Windows sudo requirement**: Requires Windows 11 24H2+ with sudo enabled in Developer Settings
+- **Windows credential caching**: UAC may remember elevation for a session
 
 ### Recommended Practices
 
@@ -510,6 +537,15 @@ sudo dnf install polkit-gnome  # Fedora/RHEL
 **Problem**: No authentication dialogue shown on macOS
 
 **Solution**: Ensure osascript is available (included by default on macOS). If running in a headless environment (SSH session, CI), the osascript dialogue cannot be displayed. sudo-mcp on macOS requires a graphical session.
+
+### Windows sudo not found
+
+**Problem**: `sudo command not found` or `is not recognized`
+
+**Solution**: Windows sudo requires Windows 11 24H2 or later. Enable it in:
+Settings > System > For Developers > Enable sudo
+
+Verify: `sudo whoami` should show your username and trigger a UAC prompt.
 
 ### Audit log not created
 
