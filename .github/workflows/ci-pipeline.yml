@@ -19,6 +19,8 @@ jobs:
             runner: ubuntu-latest
           - name: macOS
             runner: macos-latest
+          - name: Windows
+            runner: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -155,6 +157,80 @@ jobs:
 
       - name: Verify binary runs
         run: ./publish/macos-arm64/SudoMcp --help
+
+  build-windows:
+    name: Build Windows Binary
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Build Windows x64 binary
+        run: |
+          dotnet publish src/SudoMcp/SudoMcp.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained `
+            -o ./publish/win-x64 `
+            /p:PublishSingleFile=true
+
+      - name: Verify binary runs
+        run: ./publish/win-x64/SudoMcp.exe --help
+
+      - name: Create Windows zip
+        shell: pwsh
+        run: |
+          $ZipDir = "sudo-mcp-win-x64-v0.0.0"
+          New-Item -ItemType Directory -Path $ZipDir -Force | Out-Null
+
+          Copy-Item ./publish/win-x64/SudoMcp.exe "$ZipDir/sudo-mcp.exe"
+          Copy-Item scripts/install.ps1 "$ZipDir/"
+          Copy-Item scripts/uninstall.ps1 "$ZipDir/"
+          Copy-Item README.md "$ZipDir/"
+          Copy-Item SECURITY.md "$ZipDir/"
+          Copy-Item LICENSE "$ZipDir/"
+
+          Compress-Archive -Path $ZipDir -DestinationPath "sudo-mcp-win-x64-v0.0.0.zip"
+
+      - name: Upload Windows zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: sudo-mcp-win-x64-v0.0.0.zip
+          if-no-files-found: error
+
+  test-install-windows:
+    name: Test Install (Windows)
+    needs: build-windows
+    runs-on: windows-latest
+    steps:
+      - name: Download Windows zip
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-zip
+
+      - name: Extract zip
+        shell: pwsh
+        run: Expand-Archive sudo-mcp-win-x64-v0.0.0.zip -DestinationPath .
+
+      - name: Run install script
+        shell: pwsh
+        run: |
+          cd sudo-mcp-win-x64-v0.0.0
+          .\install.ps1
+
+      - name: Verify installation
+        shell: pwsh
+        run: |
+          # Refresh PATH for this session
+          $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+          sudo-mcp.exe --help
 
   test-install:
     name: Test Install (${{ matrix.arch.name }})

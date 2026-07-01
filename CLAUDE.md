@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-sudo-mcp is a C# MCP server that allows AI models to execute privileged commands via sudo/pkexec. Supports Linux (polkit/pkexec) and macOS (sudo with osascript askpass). This is a **production tool** despite inherent security risks.
+sudo-mcp is a C# MCP server that allows AI models to execute privileged commands via sudo/pkexec. Supports Linux (polkit/pkexec), macOS (sudo with osascript askpass), and Windows 11 24H2+ (built-in sudo with UAC). This is a **production tool** despite inherent security risks.
 
 ## Key Technologies
 
@@ -11,6 +11,7 @@ sudo-mcp is a C# MCP server that allows AI models to execute privileged commands
 - **System.CommandLine** - argument parsing
 - **polkit/pkexec** - privilege escalation (Linux)
 - **sudo -A with osascript** - privilege escalation (macOS)
+- **sudo (Windows 11 24H2+)** - privilege escalation (Windows)
 - **xUnit** - testing framework
 
 ## Project Structure
@@ -21,11 +22,12 @@ src/SudoMcp/
 ├── Tools/
 │   └── SudoExecutionTool.cs   # MCP tool implementation
 ├── Services/
-│   ├── IPrivilegedExecutor.cs # Executor interface (platform abstraction)
-│   ├── CommandValidator.cs     # Blocklist validation
-│   ├── PkexecExecutor.cs      # pkexec/sudo execution (Linux)
-│   ├── SudoExecutor.cs        # sudo -A execution with osascript askpass (macOS)
-│   └── AuditLogger.cs         # Structured audit logging
+│   ├── IPrivilegedExecutor.cs    # Executor interface (platform abstraction)
+│   ├── CommandValidator.cs        # Blocklist validation
+│   ├── PkexecExecutor.cs         # pkexec/sudo execution (Linux)
+│   ├── SudoExecutor.cs           # sudo -A execution with osascript askpass (macOS)
+│   ├── WindowsSudoExecutor.cs    # sudo cmd /c execution (Windows 11 24H2+)
+│   └── AuditLogger.cs            # Structured audit logging
 ├── Models/
 │   ├── ExecutionOptions.cs
 │   ├── CommandExecutionResult.cs
@@ -122,10 +124,11 @@ dotnet test --filter "Category=Integration"
 ### Platform Executor Selection
 
 The correct executor is registered at DI time based on the OS:
-- **Linux**: `PkexecExecutor` - uses `pkexec sudo -S -- bash -c <command>`
+- **Windows**: `WindowsSudoExecutor` - uses `sudo cmd /c <command>` (Windows 11 24H2+ with UAC)
 - **macOS**: `SudoExecutor` - uses `sudo -A -- bash -c <command>` with an osascript askpass helper
+- **Linux**: `PkexecExecutor` - uses `pkexec sudo -S -- bash -c <command>`
 
-Both implement `IPrivilegedExecutor` which `SudoExecutionTool` depends on.
+All three implement `IPrivilegedExecutor` which `SudoExecutionTool` depends on.
 
 ### Timeout Handling
 
@@ -205,8 +208,12 @@ dotnet run --project src/SudoMcp/SudoMcp.csproj -- --help
 
 Use the installation script:
 ```bash
+# Linux/macOS
 chmod +x scripts/install.sh
 ./scripts/install.sh
+
+# Windows (run as Administrator)
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 ```
 
 Or build manually:
@@ -228,6 +235,15 @@ dotnet publish src/SudoMcp/SudoMcp.csproj \
     -o ./publish \
     /p:PublishSingleFile=true
 sudo cp publish/SudoMcp /usr/local/bin/sudo-mcp
+
+# Windows (from PowerShell as Administrator)
+dotnet publish src/SudoMcp/SudoMcp.csproj `
+    -c Release `
+    -r win-x64 `
+    --self-contained `
+    -o ./publish `
+    /p:PublishSingleFile=true
+Copy-Item publish/SudoMcp.exe "$env:ProgramFiles\sudo-mcp\sudo-mcp.exe"
 ```
 
 ### Testing Integration
@@ -269,11 +285,11 @@ For development testing with `dotnet run`:
 
 1. Run full test suite: `dotnet test`
 2. Build in Release mode: `dotnet build -c Release`
-3. Test installation script: `./scripts/install.sh`
+3. Test installation script: `./scripts/install.sh` (Linux/macOS) or `scripts\install.ps1` (Windows)
 4. Test installed binary: `sudo-mcp --help`
 5. Verify MCP integration with Claude Desktop/Code/Cursor
 6. Review SECURITY.md for accuracy
-7. Test uninstall script: `./scripts/uninstall.sh`
+7. Test uninstall script: `./scripts/uninstall.sh` (Linux/macOS) or `scripts\uninstall.ps1` (Windows)
 8. Update version numbers if applicable
 
 ## CD/CI Pipeline
@@ -308,6 +324,7 @@ The project uses GitHub Actions for automated releases on every push to `master`
 - `sudo-mcp-arm64-v{version}.tar.gz` - Linux ARM64 complete package
 - `sudo-mcp-macos-x64-v{version}.tar.gz` - macOS Intel complete package
 - `sudo-mcp-macos-arm64-v{version}.tar.gz` - macOS Apple Silicon complete package
+- `sudo-mcp-win-x64-v{version}.zip` - Windows x64 complete package
 - `PKGBUILD` - Arch Linux package file
 - `sudo-mcp.spec` - Fedora/COPR RPM spec file
 
@@ -394,9 +411,10 @@ For automated package publishing, configure these secrets in GitHub repository s
 **Workflow**: `.github/workflows/ci-pipeline.yml`
 
 Runs on all PRs and pushes to master:
-- **Unit tests**: Fast tests without Docker on Linux and macOS (`dotnet test --filter "Category!=Integration"`)
+- **Unit tests**: Fast tests without Docker on Linux, macOS, and Windows (`dotnet test --filter "Category!=Integration"`)
 - **Integration tests**: Full privilege escalation tests using TestContainers (`dotnet test --filter "Category=Integration"`) — Linux only
 - **macOS build**: Builds and verifies macOS ARM64 binary
+- **Windows build**: Builds and verifies Windows x64 binary
 - Uploads test results as artifacts
 - Uses .NET 10 preview on Ubuntu runners
 

@@ -19,9 +19,14 @@ Option<bool> noBlocklistOption = new(
 Option<string> auditLogOption = new(
     aliases: ["--audit-log", "-a"],
     description: "Path to audit log file",
-    getDefaultValue: () => OperatingSystem.IsMacOS()
-        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library/Logs/sudo-mcp/audit.log")
-        : "/var/log/sudo-mcp/audit.log");
+    getDefaultValue: () =>
+    {
+        if (OperatingSystem.IsMacOS())
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library/Logs/sudo-mcp/audit.log");
+        if (OperatingSystem.IsWindows())
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "sudo-mcp", "audit.log");
+        return "/var/log/sudo-mcp/audit.log";
+    });
 
 Option<int> timeoutOption = new(
     aliases: ["--timeout", "-t"],
@@ -101,7 +106,9 @@ rootCommand.SetHandler(async (blocklistFile, noBlocklist, auditLog, timeout) =>
         return new CommandValidator(blocklist);
     });
 
-    if (OperatingSystem.IsMacOS())
+    if (OperatingSystem.IsWindows())
+        builder.Services.AddScoped<IPrivilegedExecutor, WindowsSudoExecutor>();
+    else if (OperatingSystem.IsMacOS())
         builder.Services.AddScoped<IPrivilegedExecutor, SudoExecutor>();
     else
         builder.Services.AddScoped<IPrivilegedExecutor, PkexecExecutor>();
